@@ -101,9 +101,8 @@
   when: docker_autotest.execute
 
 - name: Docker autotest execution variable is shown
-  debug:
-    var: '{{ docker_autotest }}'
-  when: docker_autotest.execute
+  debug: var=docker_autotest
+  when: docker_autotest is defined
 
 - name: Execute Docker autotest
   shell: "export AUTOTEST_PATH={{ autotest_dest_dir }} && $AUTOTEST_PATH/client/autotest-local {{ autotest_docker_path }}/control"
