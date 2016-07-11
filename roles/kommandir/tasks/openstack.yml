@@ -54,6 +54,14 @@
 - name: the kmndrip variable is set from first item in list
   set_fact:
     kmndrip: '{{ _kmndrip[0] | trim }}'
+  # Minimum dotted IP notation length - so this must be a list
+  when: '{{ _kmndrip | length < 7 }}'
+
+- name: the kmndrip variable is set from IP address tring
+  set_fact:
+    kmndrip: '{{ _kmndrip | trim }}'
+  # Minimum dotted IP notation length - so this must be a IP address
+  when: '{{ _kmndrip | length > 6 }}'
 
 # Saves needing an extra task to empty the file
 - name: the KMNDRIP file contains kommandir's ip addresss
