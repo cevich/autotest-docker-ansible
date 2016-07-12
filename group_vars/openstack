@@ -34,6 +34,15 @@ adept_openstack:
                 "7.2": "7f185bb6-7d85-491b-8f69-3060c8b75397"
         rhel:
                 "7.2": "c735f097-077d-4fd0-bd8d-15897b50a0dd"
+        rhelatomic:
+                "7.2": "b57cf95e-2292-410a-8073-089ccc4036c4"
+        fedora:
+                "23": "2ca94022-9656-4ce0-a41f-97a7b016a2ee"
+                "24": "54aa1d2b-b932-47bf-a045-7110abcd1e7e"
+        fedoratomic:
+                "23": "6fd19ae4-5b0f-4b42-b2f7-5389905bf4b2"
+                # 24 doesn't exist yet, check-
+                # https://getfedora.org/cloud/download/atomic.html
 
     # Userdata to supply to cloud-init
     userdata:

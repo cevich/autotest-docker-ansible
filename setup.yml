@@ -6,8 +6,12 @@
 # creates peons
 - hosts: openstack
   any_errors_fatal: true
+  vars_files:
+    # These can be overidden on command-line
+    - vars/peon_defaults.yml
+    - vars/peons.yml
   roles:
-    - role: openstack
+    - openstack
 
 - include: peons.yml
 

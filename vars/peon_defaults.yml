@@ -1,0 +1,97 @@
+---
+
+# Global defaults for test VMs unless otherwise specified
+
+# These values will be used as defaults in place of any required/missing
+# values for each peon below.  The item name must match the value from
+# the 'defaults' item in the peon format above.  The special 'defaults'
+# value item, applies when no other match is found.
+peon_defaults:
+
+    # Default defaults
+    defaults:
+      defaults: 'defaults'
+      version: '7.2'
+      # Covers all of CentOS and RHEL
+      versions:
+        - key: "version"
+          value: "7.2"
+      groups:
+        - autotested
+        - peons
+        - lvm
+        - rebooted
+      private: False
+      volume: ""
+
+    # Named defaults
+    centos:
+      volume: "20"
+      groups:
+        - centos
+        - autotested
+        - peons
+        - installed
+        - updated
+        - lvm
+        - partitioned
+        - rebooted
+
+    centosatomic:
+      groups:
+        - centosatomic
+        - atomic_upgrade
+        - autotested
+        - peons
+        - rebooted
+
+    rhel:
+      volume: "20"
+      groups:
+        - rhel
+        - subscribed
+        - autotested
+        - peons
+        - installed
+        - updated
+        - lvm
+        - partitioned
+        - rebooted
+
+    rhelatomic:
+      groups:
+        - rhelatomic
+        - subscribed
+        - atomic_upgrade
+        - autotested
+        - peons
+        - rebooted
+
+    fedora:
+      volume: "20"
+      groups:
+        - fedora
+        - autotested
+        - peons
+        - installed
+        - updated
+        - lvm
+        - partitioned
+        - rebooted
+      versions:
+        - key: "version"
+          value: "23"
+
+    fedoratomic:
+      groups:
+        - fedoratomic
+        - subscribed
+        - atomic_upgrade
+        - autotested
+        - peons
+        - rebooted
+      versions:
+        - key: "version"
+          value: "23"
+        # 24 doesn't exist yet, check-
+        # https://getfedora.org/cloud/download/atomic.html

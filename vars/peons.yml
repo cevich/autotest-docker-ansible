@@ -1,0 +1,39 @@
+---
+
+# Cloud & tooling agnostic listing of peons to setup for testing.
+# The fully set of attributes may be specified here, and/or referenced
+# by the named default, from vars/peon_defaults.yml
+
+# Peon value format: (dictionary)
+#   name: Required, partial identifier for VM (combined with adept_identifier)
+#   defaults: Optional, retrieved values from peon_defaults w/ this key
+#   version: Optional, arbitrary version / type string for image mapping
+#   groups: Optional, list of ansible-group lists to join.
+#           One dynamic group, '{{adept_job}}' will always be added.
+#   private: # Use private / security mode when True
+#   volume: # Optional, if non-empty, size (GB) of additional storage attach
+
+peons:
+    - name: "centos"
+      defaults: "centos"
+
+    - name: "centosatomic"
+      defaults: "centosatomic"
+
+    - name: "rhel"
+      defaults: "rhel"
+
+    - name: "rhelatomic"
+      defaults: "rhelatomic"
+
+    - name: "fedora"
+      defaults: "fedoratomic"
+
+# List of peon attribute name(s) to compute matrix product.
+# Each referenced attribute in each peon (above or in defaults) must
+# contain a list of dictionaries.  Each dictionary must define values
+# for the keys: 'key' and 'value'. Where key's value represents the
+# peon attribute to modify, and value is the data to set.  The cartesian
+# product (every possible combination) defines the set of peons to create.
+matrix_attributes:
+    - versions

@@ -51,12 +51,20 @@
       when: _peon[item] is defined
       with_items: "{{ matrix_attributes }}"
 
+    # Will silently NOT run if matrix_attributes | length == 1
     - name: peon matrix product is computed
       include: roles/peon/tasks/peons_matrix.yml
       # inner_item will be one item from each list in _axes
       with_cartesian: "{{ _axes }}"
       loop_control:
         loop_var: inner_item
+
+    - name: Single item 'matrix' is computed
+      include: roles/peon/tasks/peons_matrix.yml
+      vars:
+        # Third item b/c workaround above
+        inner_item: "{{ _axes[2] }}"
+      when: "{{ (matrix_attributes | length) == 1 }}"
 
   when: matrix_attributes is defined and matrix_attributes != []
 
