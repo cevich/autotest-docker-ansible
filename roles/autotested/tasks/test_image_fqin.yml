@@ -1,9 +1,18 @@
 ---
 
+- name: docker_autotest.test_image is optional
+  set_fact:
+    _no_d_a_t_i: True
+  when: docker_autotest.test_image is undefined or
+        docker_autotest.test_image == {} or
+        docker_autotest.test_image == None or
+        docker_autotest.test_image == ''
+
 - name: Test image host is optional
   set_fact:
     _test_image_host: ''
-  when: docker_autotest.test_image is defined and
+  when: _no_d_a_t_i or
+        docker_autotest.test_image is defined and
         docker_autotest.test_image.host is defined and
         (docker_autotest.test_image.host == None or
          docker_autotest.test_image.host == "")
@@ -16,7 +25,8 @@
 - name: Test image user is optional
   set_fact:
     _test_image_user: ''
-  when: docker_autotest.test_image is defined and
+  when: _no_d_a_t_i or
+        docker_autotest.test_image is defined and
         docker_autotest.test_image.user is defined and
         (docker_autotest.test_image.user == None or
          docker_autotest.test_image.user == "")
@@ -29,7 +39,8 @@
 - name: Test image tag is optional
   set_fact:
     _test_image_tag: ''
-  when: docker_autotest.test_image is defined and
+  when: _no_d_a_t_i or
+        docker_autotest.test_image is defined and
         docker_autotest.test_image.tag is defined and
         (docker_autotest.test_image.tag == None or
          docker_autotest.test_image.tag == "")
