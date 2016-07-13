@@ -8,7 +8,7 @@ autotest_dest_dir: "/var/lib/autotest"
 
 # Timeout in seconds to rewrite into control-file, will be divided
 # equally among all subtests.
-docker_autotest_timeout: 3600
+docker_autotest_timeout: "{{ docker_autotest_timeout | default(3600) }}"
 
 docker_autotest:
 
