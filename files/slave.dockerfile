@@ -1,7 +1,7 @@
 FROM docker.io/stackbrew/centos:latest
 MAINTAINER Chris Evich <cevich@redhat.com>
-ENV ANSIBLE_VERSION=stable-2.1
 
+# ADEPT relies on loop_control, first available in ansible 2.1
 RUN yum install -y epel-release && \
     yum install -y ansible iproute hostname git sed && \
     yum update -y && \
@@ -62,22 +62,5 @@ RUN yum install -y python-pip python-devel && \
     yum history -y undo 9 && \
     yum clean all && \
     rm -rf /usr/src /usr/share/doc
-
-# ADEPT relies on loop_control, first available in ansible 2.1
-RUN yum erase -y ansible && \
-    rm -rf /etc/ansible && \
-    git clone --recurse-submodules \
-              --branch $ANSIBLE_VERSION \
-              --depth 1 \
-              --single-branch \
-              --progress \
-              https://github.com/ansible/ansible.git \
-              /root/ansible && \
-    cd /root/ansible && \
-    python /root/ansible/setup.py --no-user-cfg install && \
-    mkdir -p /etc/ansible && \
-    cp /root/ansible/examples/ansible.cfg /etc/ansible && \
-    rm -rf /root/ansible && \
-    yum clean all
 
 ENTRYPOINT ["/var/lib/adept/adept.py"]
