@@ -672,6 +672,8 @@ class Playbook(Command):
         super(Playbook, self).init_stdfiles(new_env, **dargs)
         self.strip_env(new_env)
 
+# TODO: Add import class
+# TODO: Add playbook-variable class
 
 # Associate node name from yaml to class object for action_class()
 ACTIONMAP = {'command': Command,
