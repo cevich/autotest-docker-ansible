@@ -27,6 +27,9 @@ peons:
       defaults: "rhelatomic"
 
     - name: "fedora"
+      defaults: "fedora"
+
+    - name: "fedoratomic"
       defaults: "fedoratomic"
 
 # List of peon attribute name(s) to compute matrix product.
