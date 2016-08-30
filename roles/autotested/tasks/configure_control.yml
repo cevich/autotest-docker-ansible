@@ -10,4 +10,4 @@
     follow: True
     line: "\\1 {{ docker_autotest_timeout }}"
     regexp: "^(TIMEOUT\\s*=\\s*).*$"
-  when: docker_autotest.timeout is defined
+  when: docker_autotest_timeout is defined
