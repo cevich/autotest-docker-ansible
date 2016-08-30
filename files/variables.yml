@@ -9,4 +9,4 @@ adept_cloud_type: 'openstack'
 # here for play-scoping purposes
 
 # machine-consumable value to help distinguish among different runs
-adept_job: '{{ adept_job | default(lookup("file", "/proc/uptime") | to_uuid) }}'
+adept_job: '{{ lookup("file", "/proc/uptime") | to_uuid }}'
