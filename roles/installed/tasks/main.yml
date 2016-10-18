@@ -64,6 +64,7 @@
         state: "{{ state }}"
         enablerepo: '{{ _enablerepo }}'
         disablerepo: '{{ _disablerepo }}'
+        update_cache: true
       register: rpms_installed
 
     - name: rpms_installed reflects changed status
