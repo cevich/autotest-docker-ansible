@@ -5,15 +5,31 @@
 # by the named default, from vars/peon_defaults.yml
 
 # Peon value format: (dictionary)
-#   name: Required, partial identifier for VM (combined with adept_identifier)
-#   defaults: Optional, retrieved values from peon_defaults w/ this key
+#   name: Required, partial identifier for VM (combined with adept_job)
+#   defaults: Required, retrieve missing values from peon_defaults w/ this key
 #   version: Optional, arbitrary version / type string for image mapping
 #   groups: Optional, list of ansible-group lists to join.
 #           One dynamic group, '{{adept_job}}' will always be added.
 #   private: # Use private / security mode when True
 #   volume: # Optional, if non-empty, size (GB) of additional storage attach
 
+_docker_latest_userdata:
+    write_files:
+        - path: /etc/sysconfig/docker
+          content: |
+            OPTIONS='--selinux-enabled --log-driver=journald'
+            ADD_REGISTRY='--add-registry registry.access.redhat.com'
+            DOCKERBINARY=/usr/bin/docker-latest
+
 peons:
+    # Latest only
+    - name: "fedora"
+      defaults: "fedora"
+
+    - name: "fedoratomic"
+      defaults: "fedoratomic"
+
+    # Docker Current
     - name: "centos"
       defaults: "centos"
 
@@ -26,8 +42,19 @@ peons:
     - name: "rhelatomic"
       defaults: "rhelatomic"
 
-    - name: "fedora"
-      defaults: "fedora"
+    # Docker latest
+    - name: "centos_latest"
+      defaults: "centos"
+      userdata: '{{ _docker_latest_userdata }}'
 
-    - name: "fedoratomic"
-      defaults: "fedoratomic"
+    - name: "centosatomic_latest"
+      defaults: "centosatomic"
+      userdata: '{{ _docker_latest_userdata }}'
+
+    - name: "rhel_latest"
+      defaults: "rhel"
+      userdata: '{{ _docker_latest_userdata }}'
+
+    - name: "rhelatomic_latest"
+      defaults: "rhelatomic"
+      userdata: '{{ _docker_latest_userdata }}'

@@ -38,7 +38,7 @@
         cloud: default
         name: '{{ item.uuid }}'
         # Docs say this is required
-        image: '{{ adept_openstack.image_map[item.name][item.version] }}'
+        image: '{{ adept_openstack.image_map[item.defaults][item.version] }}'
         state: absent
         wait: False
       # There are many reasons why this could fail

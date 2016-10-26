@@ -2,13 +2,12 @@
 # vim-syntax: yaml
 
 # When adept_cloud_type == 'openstack' this format (dictionary) is used:
-#   image_map: (dict) mapping of peon names to version strings
-#       version string: (string) UUID/Name of image to use
-#   key_name: Name of key-pair to use for cloud-init
+#   image_map: (dict) mapping of peon's 'defaults' value and
+#              'version' string to a UUID/Name of the image to use.
 #   public_network: Name/UUID of floating-ip network
 #   public_sec_group: CSV Name/UUIDs of security group when peon.private == False
 #   private_sec_group: CSV Name/UUIDs of security group when peon.private == True
-#   userdata: structure to supply to cloud-init
+#   userdata: structure to supply to cloud-init (updated from peon.userdata)
 #   clouds: os-client-config http://docs.openstack.org/developer/os-client-config/
 #       default:
 #           auth: (dict)
@@ -37,12 +36,13 @@ adept_openstack:
                 "7.3": "rhel-7.3-server-x86_64-latest"
         rhelatomic:
                 "7.2": "6c38283e-4bf5-4f9b-ae48-e0d276ffeae4"
+                "7.3": "rhel-atomic-cloud-7.3.0-latest"
         fedora:
                 "23": "2ca94022-9656-4ce0-a41f-97a7b016a2ee"
-                "24": "54aa1d2b-b932-47bf-a045-7110abcd1e7e"
+                "24": "Fedora-Cloud-Base-24-compose-latest"
         fedoratomic:
                 "23": "6fd19ae4-5b0f-4b42-b2f7-5389905bf4b2"
-                "24": "7754ce09-4e8d-41c6-b080-351768199a94"
+                "24": "Fedora-Atomic-24-compose-latest"
 
     # Userdata to supply to cloud-init
     userdata:

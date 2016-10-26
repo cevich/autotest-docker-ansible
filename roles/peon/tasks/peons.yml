@@ -25,11 +25,10 @@
         _peon_set: []
 
     - include: roles/peon/tasks/peons_unroll.yml
-      with_items: "{{ peons }}"
+      when: peons is defined and peons != []
+      with_items: "{{ peons | default([]) }}"
       loop_control:
         loop_var: outer_item
-
-    # TODO Add support for filtering peon_set with map()
 
     - fail:
         msg: "Parsing peon dictionary"
