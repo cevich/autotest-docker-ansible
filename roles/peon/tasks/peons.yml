@@ -6,10 +6,6 @@
 # Registers:
 #   - peon_set: set of peon dictionaries according to product of matrix_attributes
 
-- fail:
-    msg: "No peons are defined"
-  when: peons is undefined or peons == []
-
 - include: roles/common/tasks/workspace_file.yml
   vars:
     workspace_file: 'peon_set.yml'
@@ -30,18 +26,11 @@
       loop_control:
         loop_var: outer_item
 
-    - fail:
-        msg: "Parsing peon dictionary"
-      when: _peon_set is undefined
-
-    - fail:
-        msg: "peon_set is empty"
-      when: _peon_set == []
-
-    - name: Write out matrix product in yaml format to workspace
+    - name: Write out peon_set.yml to workspace
       copy:
           dest: "{{ filepath }}"
           content: "{{ _peon_set | to_nice_yaml }}"
+      when: peons is defined and peons != []
 
     # block's condition applies before each task
     - name: Peon working set is recorded
