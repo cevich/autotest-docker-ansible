@@ -40,7 +40,7 @@
             /var/lib/adept/files/slave.yml
             # N/B cleanup context uses different symantics for optional arg.
             # see last item (below)
-            $ADEPT_OPTIONAL
+            $ADEPT_OPTIONAL -vvv
 
 - command:
     contexts:
