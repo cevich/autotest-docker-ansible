@@ -67,14 +67,14 @@
 - name: facts about peon's image are retrievable
   os_image_facts:
     cloud: default
-    image: '{{ adept_openstack.image_map[peon.name][peon.version] }}'
+    image: '{{ adept_openstack.image_map[peon.defaults][peon.version] }}'
     wait: True
   # Helpful error message is next task
   ignore_errors: True
   register: _imgfacts
 
 - fail:
-    msg: "Error looking up image {{ adept_openstack.image_map[peon.name][peon.version] }}"
+    msg: "Error looking up image from {{ adept_openstack.image_map }}"
   when: _imgfacts | failed
 
 - name: peon from peon_set is provisioned
@@ -82,7 +82,7 @@
     cloud: default
     # This must be large enough for the image being used
     flavor: "m1.medium"
-    image: '{{ adept_openstack.image_map[peon.name][peon.version] }}'
+    image: '{{ adept_openstack.image_map[peon.defaults][peon.version] }}'
     name: '{{ peon.uuid }}'
     security_groups: '{{ _secgrps }}'
     auto_ip: False

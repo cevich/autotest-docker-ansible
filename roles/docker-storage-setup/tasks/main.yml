@@ -39,7 +39,3 @@
 - name: docker storage is (re)configured
   command: docker-storage-setup
   register: result
-
-- debug:
-    var: item
-  with_items: '{{ result.stdout_lines }}'

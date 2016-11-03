@@ -70,7 +70,7 @@ peon_defaults:
         - updated
         - partitioned
         - rebooted
-      version: "23"
+      version: "24"
 
     fedoratomic:
       groups:
@@ -79,6 +79,4 @@ peon_defaults:
         - autotested
         - peons
         - rebooted
-      version: "23"
-      # 24 doesn't exist yet, check-
-      # https://getfedora.org/cloud/download/atomic.html
+      version: "24"

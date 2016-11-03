@@ -18,7 +18,7 @@
         _installed_rpms: "{{ installed_rpms }}"
       when: installed_rpms is defined and installed_rpms != None and
             installed_rpms != [] and installed_rpms != "" and
-            (_installed_rpms is undefined or installed_rpms == [])
+            (_installed_rpms is undefined or _installed_rpms == [])
 
     # Allows re-use by 'updated' role
     - name: state defaults to "installed"
@@ -68,9 +68,6 @@
         enablerepo: '{{ _enablerepo }}'
         disablerepo: '{{ _disablerepo }}'
         update_cache: true
-      when: not item | search("http://") and
-            not item | search("https://") and
-            not item | search("file://")
       with_items: '{{ _installed_rpms }}'
       register: rpms_installed
 
@@ -88,9 +85,6 @@
         state: "{{ state }}"
         enablerepo: '{{ _enablerepo }}'
         disablerepo: '{{ _disablerepo }}'
-      when: not item | search("http://") and
-            not item | search("https://") and
-            not item | search("file://")
       with_items: '{{ _installed_rpms }}'
       register: rpms_installed
 
