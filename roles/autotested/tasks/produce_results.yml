@@ -11,7 +11,7 @@
         autotest_execution|success
 
 - name: Attempt to run alternate results2junit
-  shell: "{{ autotest_docker_path }}/results2junit --name {{ inventory_hostname }} > {{ autotest_dest_dir }}/client/results/default/results.junit"
+  shell: "{{ autotest_docker_path }}/results2junit --name {{ inventory_hostname }} results/default > {{ autotest_dest_dir }}/client/results/default/results.junit"
   args:
     chdir: "{{ autotest_dest_dir }}/client"
   register: results2junit
