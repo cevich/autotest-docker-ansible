@@ -1,15 +1,36 @@
 ---
 
+# BUGGED!  rhsm_baseurl/server_hostname documented but unimplemented
+# - name: System is registered and subscribed
+#   redhat_subscription:
+#   args:
+#     autosubscribe: True
+#     username: "{{ rhsm.username }}"
+#     password: "{{ rhsm.password }}"
+#     rhsm_baseurl: "{{ rhsm.baseurl | default(omit) }}"
+#     server_hostname: "{{ rhsm.hostname | default(omit) }}"
+#     server_insecure: "{{ rhsm.insecure | default(omit) }}"
+#     state: present
+#   register: result
+#   when: rhsm.username is defined and
+#         rhsm.username != [] and
+#         rhsm.password is defined and
+#         rhsm.password != []
+#   until: result | success
+#   retries: "{{ rhsm_retries | default(omit) }}"
+#   delay: "{{ rhsm_delay | default(omit) }}"
+
 - name: System is registered and subscribed
-  redhat_subscription:
-  args:
-    autosubscribe: True
-    username: "{{ rhsm.username }}"
-    password: "{{ rhsm.password }}"
-    rhsm_baseurl: "{{ rhsm.baseurl | default(omit) }}"
-    server_hostname: "{{ rhsm.hostname | default(omit) }}"
-    server_insecure: "{{ rhsm.insecure | default(omit) }}"
-    state: present
+  shell: >
+    subscription-manager register\
+                         --username=$RHSM_USERNAME\
+                         --password=$RHSM_PASSWORD\
+                         {% if rhsm.insecure %}--insecure{% endif %}\
+                         {% if rhsm.baseurl %}--baseurl={{ rhsm.baseurl }}{% endif %}\
+                         {% if rhsm.hostname %}--serverurl={{ rhsm.hostname }}{% endif %}
+  environment:
+    RHSM_USERNAME: "{{ rhsm.username }}"
+    RHSM_PASSWORD: "{{ rhsm.password }}"
   register: result
   when: rhsm.username is defined and
         rhsm.username != [] and
