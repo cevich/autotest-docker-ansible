@@ -16,7 +16,7 @@
 
 # Extract a name unique to this run, but common across runs of same job
 - name: Attempt to run alternate results2junit
-  shell: {{ autotest_docker_path }}/results2junit --name {{ peon_metadata.name }} results/default
+  shell: "{{ autotest_docker_path }}/results2junit --name {{ peon_metadata.name }} results/default"
   args:
     chdir: "{{ autotest_dest_dir }}/client"
   register: results2junit
