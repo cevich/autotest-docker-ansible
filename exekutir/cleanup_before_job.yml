@@ -1,0 +1,5 @@
+---
+
+# Always create/locate kommandir (it may have gone away) and
+# acquire shared lock.
+- include: setup_before_job.yml

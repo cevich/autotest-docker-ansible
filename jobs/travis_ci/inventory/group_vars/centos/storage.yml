@@ -1,0 +1,25 @@
+---
+# vim-syntax: yaml
+
+disk_device: "/dev/vdb"
+parted_cmds: "unit % mklabel msdos mkpart primary 0 100 set 1 LVM on"
+
+lvg_ops:
+    - vg: docker_vg
+      force: yes
+      pvs: '{{ disk_device }}1'
+      state: present
+lvol_ops:
+    - lv: swap
+      size: 512
+      state: present
+      vg: docker_vg
+
+swap_device: /dev/docker_vg/swap
+
+sysconfig_dss_lines:
+    - VG=docker_vg
+    - WIPE_SIGNATURES=true
+    - DATA_SIZE=90%FREE
+    - MIN_DATA_SIZE=10g
+    - AUTO_EXTEND_POOL=false

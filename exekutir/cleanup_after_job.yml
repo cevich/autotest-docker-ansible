@@ -1,0 +1,21 @@
+---
+
+- hosts: exekutir:&!nocloud
+  force_handlers: True
+  roles:
+    - common
+    - role: exekutir_lock
+      lock_type: "exclusive"
+      lock_release: False
+    # Occasionally
+    - kommandir_destroyed
+  # Exclusive lock released by handler
+
+# releases shared lock
+- include: setup_after_job.yml
+
+- hosts: exekutir
+  roles:
+    - common
+    - role: exekutir_workspace_cleanup
+      when: not adept_debug

@@ -1,0 +1,29 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - 'inventory_hostname == "kommandir"'
+        - 'not job_xn_done'
+        - '"nocloud" not in group_names'
+
+# Workaround magic behavior changes before/after ansible 1.9.2 WRT urls
+- name: Repository rpms are installed with yum command
+  command: "yum install -y {{ item }}"
+  with_items: "{{ repo_rpms | default([]) }}"
+  # Avoid running into task timeouts.
+  async: 120
+  poll: 5
+
+- name: System is updated and RPM packages are installed
+  yum:
+    name: '{{ (["*"] | union(install_rpms)) | join(",") }}'
+    state: latest
+    disablerepo: '{{ disable_repos | join(",") }}'
+    enablerepo: '{{ enable_repos | join(",") }}'
+  # This will probably take longer
+  async: "{{ 30 * 60 }}"
+  poll: 30

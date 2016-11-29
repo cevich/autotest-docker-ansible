@@ -1,0 +1,23 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - "inventory_hostname == 'exekutir'"
+        - "job_xn_done"
+
+- name: cloud_destruction_command is executed
+  shell: "{{ item.command | mandatory }}"
+  environment: "{{ kommandir_destruction_environment }}"
+  args:
+    chdir: "{{ item.chdir | default(workspace) }}"
+    executable: "{{ item.executable | default(omit) }}"
+    creates: "{{ item.creates | default(omit) }}"
+    removes: "{{ item.removes | default(omit) }}"
+  # This can fail for numerous reasons, pretend we don't care
+  ignore_errors: True
+  register: result
+  with_dict: "{{ cloud_destruction_command }}"

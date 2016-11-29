@@ -1,0 +1,19 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - 'inventory_hostname == "kommandir"'
+        - 'not job_xn_done'
+        - "'nocloud' not in group_names"
+
+
+# TODO: Additional kommandir setup, while we have root access?
+
+# FIXME: format/mount /home
+
+- name: Clean out any home directory files older than 7 days
+  command: /bin/find /home -atime +5 -exec rm -f {} +

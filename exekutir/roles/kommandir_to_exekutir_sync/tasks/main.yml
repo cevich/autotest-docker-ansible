@@ -1,0 +1,32 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - 'inventory_hostname == "kommandir"'
+        - 'kommandir_workspace is defined'
+        - 'hostvars.exekutir.kommandir_workspace is defined'
+
+- name: exekutir's copy of kommandir_workspace is kept in sync. with kommandir's for cloud_type != nocloud
+  synchronize:
+    # From kommandir to exekutir
+    mode: pull
+    archive: true
+    # Just in case there are any, pretend they're real files.
+    copy_links: true
+    src: "{{ kommandir_workspace }}"
+    dest: "{{ hostvars.exekutir.workspace }}"
+  when: '"nocloud" not in group_names'
+
+- name: Kommandir's kommandir_workspace_dirty set true to force remote re-initialization
+  lineinfile:
+    dest: "{{ hostvarsfile }}"
+    insertafter: EOF
+    line: "kommandir_workspace_dirty: True"
+    regexp: "^kommandir_workspace_dirty:.*"
+    state: present
+  when: not job_xn_done
+  delegate_to: exekutir

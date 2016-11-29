@@ -1,0 +1,30 @@
+---
+
+use_dnf: True
+
+installed_rpms:
+    - docker
+    - atomic
+    - docker-selinux
+    - procps
+    - tar
+    - findutils
+    - bzip2
+    - gdb
+    - bridge-utils
+    - nfs-utils
+    - git
+    - glibc-devel
+    - python-bugzilla
+    - which
+    - cloud-utils-growpart
+    - python-nose
+    - python-unittest2
+    - python-mock
+    - python-docutils
+    - python-sphinx
+    - python-sphinxcontrib-httpdomain
+    - python-sphinx_rtd_theme
+    - selinux-policy-targeted
+    - libselinux-python
+    - iputils

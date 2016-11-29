@@ -1,0 +1,12 @@
+---
+
+# Always create/locate kommandir (it may have gone away) and
+# acquire shared lock.
+- include: setup_before_job.yml
+
+- hosts: kommandir
+  tasks:
+    # Block job.xn w/o complete & successful setup
+    - assert:
+        that: 'lookup("file","{{ workspace }}/exekutir_setup.exit") == "0"'
+  # Shared lock is maintained

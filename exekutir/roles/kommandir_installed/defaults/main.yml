@@ -1,0 +1,11 @@
+---
+
+# Names / URLs of repository-rpms to install
+repo_rpms: []
+
+# When installing/updating install_rpms (below), enable these repos.
+enable_repos: []
+# When installing/updating install_rpms (below), disable these repos.
+disable_repos: []
+# List of Names / URLs of packages to install / update
+install_rpms: []

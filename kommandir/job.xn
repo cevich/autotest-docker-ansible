@@ -1,0 +1,10 @@
+---
+# vim-syntax: yaml
+
+# N/B: This file can be overwritten by a copy from job_path.
+#      however the built-in setup/run/cleanup.yml playbooks
+#      assume they are involked as below:
+- playbook:
+    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}.yml"
+    inventory: "${WORKSPACE}/inventory"
+    varsfile: "${WORKSPACE}/variables.yml"

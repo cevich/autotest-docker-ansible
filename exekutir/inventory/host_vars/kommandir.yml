@@ -1,0 +1,90 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# You probably don't want to change these
+hostvarsfile: "{{ hostvars.exekutir.inventory_dir }}/host_vars/kommandir.yml"
+uuid: '{{ hostvars.exekutir.uuid }}'
+job_name: '{{ hostvars.exekutir.job_name }}'
+
+# These will be updated at runtime (on a copy of this file)
+ansible_host: "127.0.0.1"
+ansible_ssh_host: "{{ ansible_host }}"
+
+# Timeout in seconds to wait for port 22 + ssh availablility on peons.
+peon_hostup_timeout: 60
+
+# The common role will assign this host to the group
+# defined by cloud_type.  This implies hauling in
+# any {{workspace}}/inventory/group_vars/{{cloud_type}}
+# variables.  The Exekutir's cloud_type does not have to be
+# the same as Kommandir's cloud_type, but it normally is.
+cloud_type: "nocloud"
+
+# Flag that kommandir's workspace old or uninitialized.  It
+# should be re-synchronized from Exekutir's copy.  This is updated
+# at runtime in the workspace copy of this host_vars file.
+kommandir_workspace_dirty: True
+
+repo_rpms:
+    - epel-release
+    - https://rdoproject.org/repos/rdo-release.rpm
+enable_repos: []
+disable_repos: []
+install_rpms:
+    - rsync
+    - iproute
+    - hostname
+    - sed
+    - vim
+    - git
+    - gdb
+    - man
+    - man-db
+    - man-pages
+    - findutils
+    - python-bugzilla
+    - pylint
+    - python-pep8
+    - python2-mock
+    - python-sphinx
+    - python-unittest2
+    - python-docutils
+    - python-sphinxcontrib-httpdomain
+    - python-sphinx_rtd_theme
+    - PyYAML
+    - ansible
+    - python-heatclient
+    - heat-cfntools
+    - python-dogpile-core
+    - python-swiftclient
+    - python-heatclient
+    - python-ironicclient
+    - python-troveclient
+    - python-neutronclient
+    - python-cinderclient
+    - python-glanceclient
+    - python-keystoneclient
+    - python-novaclient
+    - python-six
+    - python-ipaddress
+    - python-jsonpatch
+    - python-decorator
+    - python-munch
+    - python-keystoneauth1
+    - python-os-client-config
+    - python2-requestsexceptions
+
+git_cache_args:
+    - repo: "https://github.com/autotest/autotest.git"
+      recursive: False
+      cachepath: 'autotest'
+    - repo: "https://github.com/autotest/autotest-docker.git"
+      recursive: True
+      cachepath: 'autotest-docker'
+    - repo: "https://github.com/python-bugzilla/python-bugzilla.git"
+      recursive: False
+      cachepath: "python-bugzilla"
+      version: "v1.2.2"

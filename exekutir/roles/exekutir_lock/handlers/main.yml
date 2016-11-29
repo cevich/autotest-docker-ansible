@@ -1,0 +1,6 @@
+---
+
+- name: Release lock on exekutir
+  debug:
+    msg: "FIXME"
+  delegate_to: exekutir

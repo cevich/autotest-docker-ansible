@@ -1,0 +1,34 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1) version of ansible  #
+################################################################
+
+- assert:
+    that:
+        - "wait_for_timeout is defined"
+        - "wait_for_hostname is defined"
+        - "port_listening is undefined or port_listening in ['present', 'started', 'stopped', 'absent', 'drained']"
+
+- name: wait for port
+  become: False
+  wait_for:
+    host: '{{ wait_for_hostname }}'
+    port: '{{ wait_for_port | default(22) }}'
+    connect_timeout: 1
+    timeout: '{{ wait_for_timeout }}'
+    state: '{{ port_listening | default("started") }}'
+  ignore_errors: True
+  register: result
+  delegate_to: localhost
+  retries: 10
+  delay: 1
+
+- assert:
+    that: 'result.results | last | success'
+
+- name: sleep 1s command executes successfully 10 times
+  command: sleep 1s
+  # Support role being called with alternate name
+  delegate_to: '{{ wait_for_hostname }}'
+  with_sequence: start=0 end=9
