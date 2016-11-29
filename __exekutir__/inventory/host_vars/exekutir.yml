@@ -1,0 +1,55 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# These are all default values for this host, any may be overridden
+# on the ansible command-line
+
+# You probably don't want to change any of these
+ansible_connection: "local"
+ansible_become: false
+ansible_host: "localhost"
+ansible_ssh_host: "{{ ansible_host }}"
+compatible_ansible_minimum: "2.0"
+compatible_ansible_maximum:
+
+# The common role will assign this host to the group
+# defined by cloud_type.  This implies hauling in
+# any {{workspace}}/inventory/group_vars/{{cloud_type}}
+# variables.  The Exekutir's cloud_type does not have to be
+# # the same as Kommandir's cloud_type, but it normally is.
+cloud_type: "nocloud"  # It can't provision itself!
+
+# This needs to be here b/c it's needed b4 common role runs.
+# Several plays update a copy of this host_vars file (in workspace)
+# during runtime.  e.g. setting/unsetting ``kommandir_workspace_dirty``
+hostvarsfile: "{{ inventory_dir }}/host_vars/exekutir.yml"
+
+# Optional prefix to kommandir name (will have _ appended).
+kommandir_name_prefix: ''
+
+# Default name to append prefix onto
+default_kommandir_name: 'kommandir'
+
+# Timeout in seconds to wait for port 22 + ssh availability on kommandir.
+kommandir_hostup_timeout: 120
+
+# Directory where kommandir's workspace will be sync'd to/from
+kommandir_workspace: '{{ workspace }}/kommandir_workspace'
+
+# Flag that exekutir's copy of kommandir's workspace needs
+# to be initialized from exekutir's copy.  This is updated at runtime
+# in the workspace copy of this host_vars file.
+kommandir_workspace_dirty: True
+
+# Path where job's kommandir.xn, inventory, and variables are found.
+job_path: "{{ lookup('env','ADEPT_PATH') }}/jobs/full"
+
+job_name: "{{ job_path | basename }}"
+
+# Prevents resource clashes across jobs, must be unique,
+# must be DNS and User Name compatible.  Must be all on
+# a single line, b/c common role will hard-code the actual value.
+uuid: "x{{ [ansible_date_time, ansible_hostname, ansible_uptime_seconds, ansible_memfree_mb] | to_uuid | replace('-','') | truncate(8,true,'') }}"

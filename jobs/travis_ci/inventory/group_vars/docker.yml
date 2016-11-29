@@ -1,0 +1,15 @@
+---
+
+enabled_services:
+    - docker
+
+restarted_services:
+    - docker
+
+disabled_services:
+    - docker-latest
+
+stopped_services:
+    - docker-latest
+
+sysconfig_docker_latest: False

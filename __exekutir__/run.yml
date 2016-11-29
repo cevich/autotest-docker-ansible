@@ -1,0 +1,34 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# Always create/locate kommandir (it may have gone away)
+- include: kommandir.yml
+
+- hosts: kommandir
+  # Ensure exclusive lock is released, even on role failure
+  force_handlers: True
+  pre_tasks:
+    # file created by exekutir.xn, only exists after setup is complete
+    - assert:
+        # prevent run context transition w/o setup completing successfully
+        that:
+            - 'lookup("file","{{ workspace }}/exekutir_setup.exit") == "0"'
+  roles:
+    # Shared lock allows concurrent run context transitions
+    # but blocks setup/cleanup from messing with the kommandir
+    # at the same time.
+    - role: exekutir_lock
+      lock_type: "shared"
+      # Protect exekutir.xn's call to kommandir's job.xn
+      lock_release: False
+      # job_xn_done is set in common role
+      when: not job_xn_done
+    # Release lock afterwards (i.e. this playbook is called twice
+    # from exekutir.xn)
+    - role: exekutir_lock
+      lock_type: "shared"
+      lock_release: True
+      when: job_xn_done

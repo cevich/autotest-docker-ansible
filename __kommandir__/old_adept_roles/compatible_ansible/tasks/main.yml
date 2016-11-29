@@ -1,0 +1,28 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - "workspace is defined"
+        - "compatible_ansible_maximum is defined"
+        - "compatible_ansible_minimum is defined"
+        - "ansible_version.string is defined"
+
+- name: ansible must be greater or equal to minimum version
+  fail:
+    msg: >
+        Incompatible ansible version {{ ansible_version.string }},
+        minimum is {{ compatible_ansible_minimum }}
+  when: compatible_ansible_minimum and
+        compatible_ansible_minimum | version_compare(ansible_version.string, '>=')
+
+- name: ansible must be less than maximum version
+  fail:
+    msg: |
+        Incompatible ansible version {{ ansible_version.string }},
+        maximum is {{ compatible_ansible_maximum }}
+  when: compatible_ansible_maximum and
+        compatible_ansible_maximum | version_compare(ansible_version.string, '<')
