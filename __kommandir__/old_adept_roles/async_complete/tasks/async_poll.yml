@@ -1,0 +1,14 @@
+---
+
+# Depends:
+#   async_job
+# Registers:
+#   result
+
+- name: async. job has completed within 10 minute timeout
+  async_status:
+    jid: "{{ async_job.ansible_job_id }}"
+  register: result
+  until: result.finished
+  retries: 60
+  delay: 10

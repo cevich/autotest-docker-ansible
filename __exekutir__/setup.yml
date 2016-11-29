@@ -1,0 +1,10 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# Always create/locate/re-locate kommandir (it may have gone away)
+# before _and_ after exekutir.xn's call to kommandir's job.xn
+# (i.e. this playbook is called _twice_)
+- include: kommandir.yml

@@ -1,0 +1,19 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+dependencies:
+    - common
+    - role: kommandir_discovered
+      when: not job_xn_done
+    - kommandir_up
+    # Refresh exekutir AND kommandir's kommandir_workspace_dirty flag
+    - role: inventory_updated
+      inventory_hostnames:
+        - exekutir
+        - kommandir
+      when: not job_xn_done
+    - role: kommandir_installed
+      when: not job_xn_done

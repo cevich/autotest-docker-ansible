@@ -1,0 +1,19 @@
+---
+
+# See nocloud/all.yml for complete comments and examples
+
+cloud_asserts:
+    - 'kommandir_name is defined'
+    - 'workspace is defined'
+    - 'kommandir_workspace is defined'
+    - 'lookup("pipe","test -r $WORKSPACE/clouds.yml; echo $?) == "0"'
+    - 'lookup("pipe","test -r ${ANSIBLE_PRIVATE_KEY_FILE}; echo $?) == "0"'
+    - 'lookup("pipe","test -r ${ANSIBLE_PRIVATE_KEY_FILE}.pub; echo $?) == "0"'
+
+cloud_provisioning_command:
+    command: "{{ kommandir_workspace }}/bin/openstack_discover_create.py {{ uuid }} {{ kommandir_name }} ${ANSIBLE_PRIVATE_KEY_FILE} ${ANSIBLE_PRIVATE_KEY_FILE}.pub"
+    chdir: "{{ workspace }}"
+
+cloud_destruction_command:
+    command: "{{ kommandir_workspace }}/bin/openstack_destroy.py {{ uuid }} {{ kommandir_name }} ${ANSIBLE_PRIVATE_KEY_FILE} ${ANSIBLE_PRIVATE_KEY_FILE}.pub"
+    chdir: "{{ workspace }}"

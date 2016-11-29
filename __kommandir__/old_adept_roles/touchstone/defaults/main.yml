@@ -1,0 +1,9 @@
+---
+
+touchstone_file: /root/touchstone
+
+# Empty list to only check file existence
+touchstone_contents: []
+
+# Variable set True when file exists and contents match
+stonetouched: False

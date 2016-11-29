@@ -1,0 +1,67 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - "inventory_hostname == 'kommandir'"
+        - 'not job_xn_done'
+        - "cloud_provisioning_command is defined"
+        - "group_names is defined"
+        - "hostvars.exekutir.inventory_dir not in ['',None,{},[]]"
+
+# Allows customized checking of jinja templates / variables in cloud_provisioning_command
+- name: Optional, kommandir's list of cloud_asserts are all true
+  assert:
+    that: '{{ cloud_asserts }}'
+  when: cloud_asserts is defined
+
+- name: Kommandir's cloud_provisioning_command is executed on exekutir
+  shell: "{{ cloud_provisioning_command.command | mandatory }}"
+  # Optional dictionary of env vars to set w/in shell's process.
+  environment: "{{ cloud_environment | default({}) }}"
+  args:
+    # Command is being run on exekutir, not kommandir.
+    chdir: "{{ cloud_provisioning_command.chdir | default(hostvars.exekutir.workspace) }}"
+    executable: "{{ cloud_provisioning_command.executable | default(omit) }}"
+    # Should be relative to workspace, on exekutir!
+    creates: "{{ cloud_provisioning_command.creates | default(omit) }}"
+    # Same here.
+    removes: "{{ cloud_provisioning_command.removes | default(omit) }}"
+  delegate_to: exekutir
+  register: result
+
+- name: Command's stdout is parsed into YAML
+  set_fact:
+    # Old ansible takes anything as yaml, going through JSON guaranteese parsing.
+    result: '{{ result.stdout | from_yaml | to_json | from_json }}'
+
+- name: result is displayed
+  debug:
+    var: "result"
+  when: adept_debug
+
+- name: Kommandir's host_vars file is updated on exekutir with discovered values
+  lineinfile:
+    # This is running on exekutir, not kommandir.
+    dest: "{{ hostvarsfile }}"
+    regexp: '^{{ item.key }}:.*'
+    line: '{{ item.key }}: {{ item.value }}'
+    insertafter: EOF
+    create: True
+    state: present
+  delegate_to: exekutir
+  with_dict: "{{ result }}"
+
+- name: Kommandir's workspace_dirty_flag set true whenever kommandir created/discovered
+  lineinfile:
+    # This is running on exekutir, not kommandir.
+    dest: "{{ hostvarsfile }}"
+    regexp: '^kommandir_workspace_dirty:.*'
+    line: 'kommandir_workspace_dirty: True'
+    insertafter: EOF
+    create: True
+    state: present
+  delegate_to: exekutir

@@ -1,0 +1,63 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - 'inventory_hostname == "exekutir"'
+        - 'kommandir_workspace is defined'
+        - 'kommandir_workspace_dirty is defined'
+        - 'not job_xn_done'
+        - 'workspace is defined'
+        - 'ANSIBLE_PRIVATE_KEY_FILE is defined'
+        - 'job_name is defined'
+        - 'uuid is defined'
+
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["kommandir_workspace","job_xn_done","kommandir_workspace_dirty","ANSIBLE_PRIVATE_KEY_FILE"]
+
+- name: exekutir's kommandir_workspace directory exists
+  file:
+    path: "{{ kommandir_workspace }}"
+    state: directory
+  when: kommandir_workspace_dirty
+
+- name: exekutir's kommandir_workspace/ssh directory exists if kommandir_workspace_dirty
+  file:
+    path: "{{ kommandir_workspace }}/ssh"
+    mode: "0700"
+    state: directory
+  when: kommandir_workspace_dirty
+
+- name: The kommandir_workspace/.ssh directory symlinked to ssh if kommandir_workspace_dirty
+  file:
+    src: "{{ kommandir_workspace }}/ssh"
+    dest: "{{ kommandir_workspace }}/.ssh"
+    state: link
+  when: kommandir_workspace_dirty
+
+- name: Future kommandirs and peons protected by new ssh key if kommandir_workspace_dirty
+  command: ssh-keygen -f "{{ kommandir_workspace }}/ssh/kommandir_key" -N ""
+  args:
+    chdir: "{{ kommandir_workspace }}/ssh/"
+    creates: "{{ kommandir_workspace }}/ssh/kommandir_key"
+  when: kommandir_workspace_dirty
+
+- name: contents of file path in ANSIBLE_PRIVATE_KEY_FILE is buffered if kommandir_workspace_dirty
+  set_fact:
+    result: '{{ lookup("file", ANSIBLE_PRIVATE_KEY_FILE) }}'
+  when: kommandir_workspace_dirty
+
+- name: Buffered public key written to kommandir_workspace/ssh/authorized_keys if kommandir_workspace_dirty
+  lineinfile:
+    dest: "{{ kommandir_workspace }}/ssh/authorized_keys"
+    line: '{{ result }}'
+    create: True
+    state: present
+  when: kommandir_workspace_dirty
