@@ -1,0 +1,16 @@
+---
+
+# Some Exekutir variable values are referenced by kommandir
+- hosts: exekutir
+  roles:
+    - common
+
+- hosts: kommandir
+  force_handlers: True
+  roles:
+    - common
+    - kommandir_to_exekutir_sync
+    - role: exekutir_lock
+      lock_type: "shared"
+      lock_release: True
+  # Shared lock is released by handler

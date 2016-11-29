@@ -1,9 +1,0 @@
----
-
-# No problem if this runs more than once
-- hosts: localhost
-  any_errors_fatal: true
-  vars:
-    ansible_connection: local
-  roles:
-    - slave

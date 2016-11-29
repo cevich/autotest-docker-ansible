@@ -1025,11 +1025,15 @@ class TestPlaybook(TestActionBaseBase):
 
     def test_init_bad(self):
         "Verify differences in init method from Command class"""
+        env = {'ADEPT_PATH':'/foobar',
+               'ADEPT_OPTIONAL': '--verbose --sudo'}
         # This was already tested above, and otherwise gets in the way here
         self.patchers.append(patch('%s.Command.make_env' % self.UUT,
-                                   lambda mock_self: {}))
+                                   lambda mock_self: env))
         self.patchers.append(patch('%s.shlex.split' % self.UUT,
                                    lambda x, _: x.split()))
+        self.patchers.append(patch('%s.os.path.isfile' % self.UUT,
+                                   lambda x: isinstance(x, MagicMock)))
         self.start_patchers()
         self.mocks['Parameters'].optional = ''
         for dargs in self.subtests(({'index': 42,},

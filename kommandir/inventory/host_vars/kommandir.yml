@@ -1,0 +1,14 @@
+---
+
+
+# N/B: This file may be overwritten when job_path is syncd to
+# kommandir's kommandir_workspace
+compatible_ansible_minimum: "2.2.1"
+compatible_ansible_maximum:
+
+# This is always localhost.  The details below will be re-added by
+# kommandir_workspace_setup role if it's missing.
+ansible_connection: local
+ansible_become: false
+ansible_host: 127.0.0.1
+ansible_ssh_host: "{{ ansible_host }}"

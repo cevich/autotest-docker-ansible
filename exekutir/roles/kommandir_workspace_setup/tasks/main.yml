@@ -1,0 +1,320 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - 'inventory_hostname == "kommandir"'
+        - 'uuid is defined'
+        - 'kommandir_workspace is defined'
+        - 'group_names is defined'
+        - 'kommandir_workspace_dirty is defined'
+        - 'hostvars.exekutir.kommandir_workspace_dirty is defined'
+        - 'hostvars.exekutir.workspace is defined'
+        - 'hostvars.exekutir.adept_path is defined'
+        - 'hostvars.exekutir.inventory_dir is defined'
+        - 'not job_xn_done'
+
+- name: Root access is required for non-nocloud kommandirs
+  assert:
+    that:
+        - 'ansible_user is undefined or ansible_user == "root"'
+        - 'ansible_ssh_user is undefined or ansible_ssh_user == "root"'
+        - 'ansible_user is defined or ansible_ssh_user is defined'
+  when: "'nocloud' not in group_names"
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["uuid","kommandir_workspace","group_names","kommandir_workspace_dirty","hostvars.exekutir.kommandir_workspace_dirty","hostvars.exekutir.workspace","hostvars.exekutir.adept_path","job_xn_done","ansible_user","ansible_ssh_user"]
+
+# User's home dir as remote workspace prevents clashes between concurrent jobs
+# and allows job.xn + playbooks to not run with root access.
+- name: A user named uuid exists on remote kommandir
+  user:
+    name: "{{ uuid }}"
+    state: present
+  when: "'nocloud' not in group_names"
+
+# Always keep it synchronized with exekutir's copy
+- name: Exekutir's kommandir_workspace synchronized to remote Kommandir, if it's kommandir_workspace_dirty flag is set
+  synchronize:
+    archive: true
+    # Relative links wouldn't work afterwards
+    copy_links: true
+    # on the exekutir
+    src: "{{ hostvars.exekutir.kommandir_workspace }}/"
+    # On the kommandir
+    dest: "{{ kommandir_workspace }}"
+    # Don't trust whatever's already there
+    delete: true
+  # Not needed when kommandir_workspace == hostvars.exekutir.kommandir_workspace
+  when: kommandir_workspace_dirty and 'nocloud' not in group_names
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+
+# Allow it to be overwritten by job_path (below) only when initialized.
+- name: Exekutir's adept.py copied to kommandir's kommandir_workspace if both kommandir_workspace_dirty flags set
+  copy:
+    src: "{{ hostvars.exekutir.adept_path}}/adept.py"
+    dest: "{{ kommandir_workspace }}/"
+  when: kommandir_workspace_dirty and hostvars.exekutir.kommandir_workspace_dirty
+    
+
+# Initialize kommandir's kommandir_workspace/cache one time only.
+- name: status of exekutir's cache is known if both kommandir_workspace_dirty flags set
+  stat:
+    path: "{{ hostvars.exekutir.workspace }}/cache"
+    # make isdir true if "cache" is a symlink to a directory
+    follow: True
+  register: result
+  delegate_to: exekutir
+  when: kommandir_workspace_dirty and hostvars.exekutir.kommandir_workspace_dirty
+
+- name: The result flag is set True when exekutir's cache is a directory
+  set_fact:
+    result: True
+  when: result.stat.exists is defined and result.stat.exists and result.stat.isdir
+
+- name: The result flag is set False if not set True
+  set_fact:
+    result: False
+  # Otherwise a long string of ..or.. checks are needed
+  when: result != True
+
+
+# Provide three options when it comes to creating a cache of items for eventual
+# deployment onto peons. Not in order: Check if some external step drop a $WORKSPACE/cache
+# directory or symlink to one.  Either sym-link that into kommandir_workspace
+# for a local kommandir or sync. it to a remote kommandir.  Failing that, if
+# git_cache_args is defined, check out the contents from git.
+- name: Content syncd from exekutir's cache if result is true, cloud_type != 'nocloud', both kommandir_workspace_dirty flags set, and git_cache_args is undefined
+  synchronize:
+    archive: true
+    # Relative links wouldn't work afterwards
+    copy_links: true
+    delete: true
+    src: "{{ hostvars.exekutir.workspace }}/cache/"
+    dest: "{{ kommandir_workspace }}/cache"
+  when: kommandir_workspace_dirty and hostvars.exekutir.kommandir_workspace_dirty and
+        "nocloud" not in group_names and result and
+        git_cache_args | default([]) not in [None,"",{},[]]
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+# --or--
+
+# Work with git on kommandir, assuming it's binary is newer.
+- name: Kommandir's kommandir_workspace/cache directory exists when git_cache_args non-empty, result is false, and both kommandir_workspace_dirty flags set
+  file:
+    path: "{{ kommandir_workspace }}/cache"
+    state: directory
+  when: kommandir_workspace_dirty and hostvars.exekutir.kommandir_workspace_dirty and
+        not result and git_cache_args is defined
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+- name: Kommandir's cache content checked out from git when git_cache_args non-empty, result is false, and both kommandir_workspace_dirty flags set
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ kommandir_workspace }}/cache/{{ item.cachepath }}"
+    # Shallow clone is much faster when specific branch/tag/version is _not_ used.
+    # Otherwise, if a version is specified, then the full history-depth is likely required to find it
+    depth: "{{ omit if item.version is defined else item.depth | default(2) }}"
+    # HEAD is the default if not specified
+    version: "{{ item.version | default(omit) }}"
+    recursive: "{{ item.recursive | default(False) }}"
+  when: kommandir_workspace_dirty and hostvars.exekutir.kommandir_workspace_dirty and
+        not result and git_cache_args is defined
+  with_items: '{{ git_cache_args }}'
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+# --or--
+
+- name: Kommandir's cache symlinked from exekutir's workspace/cache if result is true, cloud_type == 'nocloud', and both kommandir_workspace_dirty flags set.
+  file:
+    src: "{{ hostvars.exekutir.workspace }}/cache"
+    dest: "{{ hostvars.exekutir.kommandir_workspace }}/cache"
+    state: link
+  delegate_to: exekutir
+  when: hostvars.exekutir.kommandir_workspace_dirty and kommandir_workspace_dirty and
+        result and "nocloud" in group_names
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+# Allow job_path sync (below) to overwite these if needed
+- name: The kommandir playbook dir is syncd to kommandir if both kommandir_workspace_dirty flags set
+  synchronize:
+    archive: true
+    # Relative links wouldn't work afterwards
+    copy_links: true
+    # on the exekutir
+    src: "{{ hostvars.exekutir.adept_path}}/kommandir/"
+    # On the kommandir
+    dest: "{{ kommandir_workspace }}"
+  when: hostvars.exekutir.kommandir_workspace_dirty and kommandir_workspace_dirty
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+# Done after kommandir sync to allow overwriting if needed
+# TODO: This could/should support deploying from a URL or tarball content
+#       to permit external/custom/private jobs.
+- name: Exekutir's job_path is sync. to kommandir's kommandir_workspace if both kommandir_workspace_dirty flags set
+  synchronize:
+    archive: true
+    # Relative links wouldn't work afterwards
+    copy_links: true
+    # on the exekutir
+    src: "{{ hostvars.exekutir.job_path }}/"
+    # On the kommandir
+    dest: "{{ kommandir_workspace }}"
+  when: hostvars.exekutir.kommandir_workspace_dirty and kommandir_workspace_dirty
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+
+# Guarantee that kommandir == localhost upon initialization only.  Permit
+# above syncs. to overwrite with alternate content.
+- name: Kommandir's kommandir_workspace/inventory/hosts contains an entry for kommandir
+  lineinfile:
+    dest: "{{ kommandir_workspace }}/inventory/hosts"
+    insertafter: EOF
+    line: "kommandir  # Added by kommandir_workspace_setup role"
+    regexp: "^kommandir .*"
+    create: True
+    state: present
+  when: hostvars.exekutir.kommandir_workspace_dirty and kommandir_workspace_dirty
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+    - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
+
+- name: Kommandir job.xn's host_vars/kommandir.yml file always points to locahost
+  lineinfile:
+    dest: "{{ hostvars.exekutir.kommandir_workspace }}/inventory/host_vars/kommandir.yml"
+    insertafter: EOF
+    line: "{{ item.key }}: {{ item.value }}"
+    regexp: "^{{ item.key }}:.*"
+    # Must always exist
+    create: True
+    state: present
+  delegate_to: exekutir
+  when: kommandir_workspace_dirty
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+  with_items:
+    - key: "ansible_connection"
+      value: "local"
+    - key: "ansible_become"
+      value: "false"
+    - key: "ansible_host"
+      value: "127.0.0.1"
+    - key: "ansible_ssh_host"
+      # Escape addition of jinja2 template for later resolution.
+      value: '{{ "{{ " }}ansible_host{{ " }}" }}"'
+
+# In case permissions were screwed up in kommandir dir or job_path dir
+- name: Owner of ssh files (uuid) is buffered for cloud_type != nocloud
+  set_fact:
+    result: "{{ uuid }}"
+  when: "'nocloud' not in group_names"
+
+- name: Owner of ssh files (ansible_user_id) buffered for cloud_type == nocloud
+  set_fact:
+    result: "{{ ansible_user_id }}"
+  when: "'nocloud' in group_names"
+
+- name: Kommandir's kommandir_workspace/ssh directory exists with correct permissions
+  file:
+    path: "{{ kommandir_workspace }}/ssh"
+    mode: "0700"
+    owner: "{{ result }}"
+    group: "{{ result }}"
+    setype: "ssh_home_t"
+    recurse: true
+    state: directory
+
+- name: Kommandir's kommandir_workspace/ssh files have correct permissions
+  file:
+    path: "{{ item }}"
+    mode: "0600"
+    owner: "{{ result }}"
+    group: "{{ result }}"
+    setype: "ssh_home_t"
+    state: file
+  with_fileglob:
+    - "{{ kommandir_workspace }}/ssh/*"
+
+- name: Kommandir's kommandir_workspace/.ssh is a symlink to kommandir_workspace/ssh
+  file:
+    src: "{{ kommandir_workspace }}/ssh"
+    dest: "{{ kommandir_workspace }}/.ssh"
+    state: link
+
+# It could have been overwritten by job_path
+- name: Kommandir's adept.py has correct permissions
+  file:
+    path: "{{ kommandir_workspace }}/adept.py"
+    mode: "0755"
+    owner: "{{ result }}"
+    group: "{{ result }}"
+    setype: "ssh_home_t"
+
+# Hook to allow external overriding of variables, except for these (with_items).
+- name: exekutir's kommandir_workspace/variables.yml always updated with runtime values
+  lineinfile:
+    dest: "{{ hostvars.exekutir.workspace }}/variables.yml"
+    insertafter: EOF
+    line: "{{ item.line }}"
+    regexp: "{{ item.regexp | default(omit) }}"
+    # It may not exist, it's optional
+    create: True
+    state: present
+  # Must be done here, exekutir_workspace_setup play lacks access to hostvars.kommandir...
+  delegate_to: exekutir
+  when: kommandir_workspace_dirty
+  with_items:
+    # These values must persist across all transitions.  Guarantee
+    # this by encoding them into the global variable overrides file.
+    - line: "uuid: {{ hostvars.exekutir.uuid }}"
+      regexp: "^uuid:.*"
+    - line: "job_name: {{ hostvars.exekutir.job_name }}"
+      regexp: "^job_name:.*"
+    # Needed by exekutir.xn for executing kommandir's job.xn (later)
+    - line: "exekutir_is_kommandir: {{ 'nocloud' in group_names }}"
+      regexp: "^exekutir_is_kommandir:.*"
+  notify:
+    - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
+
+# Must happen _after_ critical variables added/updated (above).
+- name: Exekutir's workspace/variables.yml copied to exekutir's kommandir_workspace when both 
+  copy:
+    src: "{{ hostvars.exekutir.workspace }}/variables.yml"
+    dest: "{{ hostvars.kommandir.kommandir_workspace }}/variables.yml"
+
+- name: Ensure remote kommandir has read-only access to variables.yml.
+  file:
+    path: "{{ hostvars.kommandir.kommandir_workspace }}/variables.yml"
+    mode: "0444"
+    owner: "root"
+    group: "root"
+    setype: "ssh_home_t"
+    state: file
+  when: '"nocloud" not in group_names'
+
+- name: Ensure local kommandir has read-only access to variables.yml.
+  file:
+    path: "{{ hostvars.kommandir.kommandir_workspace }}/variables.yml"
+    mode: "0444"
+    setype: "ssh_home_t"
+    state: file
+  when: '"nocloud" in group_names'

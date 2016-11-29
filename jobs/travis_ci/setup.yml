@@ -1,0 +1,30 @@
+---
+
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: kommandir
+  # If any of these fail, they will prevent creation of file (below)
+  # which will be detected by test_exekutir_xn.sh
+  pre_tasks:
+    - assert:
+        that:
+            - 'uuid == "something_i_made_up_for_travis_ci"'
+            - 'cloud_type == "nocloud"'
+            - 'repo_rpms == []'
+            - 'enable_repos == []'
+            - 'disable_repos == []'
+            - 'install_rpms == []'
+            - 'git_cache_args == []'
+            - 'some_magic_variable_for_testing == "value_for_magic_variable"'
+            - 'adept_context in ["setup", "run", "cleanup"]'
+  tasks:
+    - set_fact:
+        result: "This is the {{ job_name }} job's test play, running on kommandir for the {{ adept_context }} context"
+    - debug:
+        msg: "{{ result }}"
+    # Contents of these files varified in test_exekutir_xn.sh
+    - lineinfile:
+        dest: "{{ workspace }}/test_file_from_{{ adept_context }}.txt"
+        create: true
+        insertafter: EOF
+        line: "{{ result }}"

@@ -1,0 +1,3 @@
+If this were a directory (or symlink to a directory), the playbooks would
+copy it's contents into the kommandir's workspace, cache sub-directory.
+Otherwise it's contents will be checked out from git.

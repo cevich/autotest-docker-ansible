@@ -1,0 +1,37 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - "workspace is defined"
+
+- name: ansible --version output is captured
+  command: ansible --version
+  register: result
+  # Not defined for older ansible versions
+  when: ansible_version is undefined or
+        ansible_version.string is undefined
+
+- name: first line of result is split by spaces
+  set_fact:
+    result: "{{ result.stdout_lines[0].split(' ') }}"
+  when: ansible_version is undefined or
+        ansible_version.string is undefined
+
+- name: second item in list is buffered
+  set_fact:
+    ansible_version:
+        string: "{{ result[1] }}"
+  when: ansible_version is undefined or
+        ansible_version.string is undefined
+
+# For debugging purposes, in playbooks the ansible_version.string is used
+- name: ansible version written to workspace/ANSIBLE_VERSION
+  copy:
+    dest: "{{ workspace }}/ansible_version"
+    content: "{{ ansible_version.string }}"
+  # Needed to force file to be written locally
+  delegate_to: "{{ inventory_hostname }}"
