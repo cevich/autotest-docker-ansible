@@ -1,0 +1,5 @@
+If this were a directory (or symlink to a directory), the playbooks would
+copy it's contents into the kommandir's workspace, cache directory.  Otherwise
+it will be checked out from git in:
+
+__exekutir__/roles/kommandir_workspace_setup/tasks/main.yml

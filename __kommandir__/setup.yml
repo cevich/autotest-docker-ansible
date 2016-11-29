@@ -1,0 +1,8 @@
+---
+
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: kommandir
+  tasks:
+    - debug:
+        msg: "This is the playbook running on kommandir for the {{ adept_context }} context"

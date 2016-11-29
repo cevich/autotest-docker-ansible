@@ -10,17 +10,29 @@ branches:
 sudo: false
 
 matrix:
-  fast_finish: true
+    fast_finish: true
 
 git:
     submodules: false
+    # At least two are needed for the typo-check (below)
+    depth: 3
+
+env:
+    global:
+        - TYPOS="komandir executir ecoh roel fixup! squash! FIXME id_rsa"
+        - PATH="$PATH:$VIRTUAL_ENV/bin"    
+        - ANSIBLE_VERSION=2.1
 
 install:
     # These seem to match up roughly with behavior on RHEL 7
-    - pip install ansible-lint==2.0.3 Sphinx==1.2.2 unittest2==1.1.0 pylint==1.4.5
+    - pip install ansible==$ANSIBLE_VERSION Sphinx==1.2.2 unittest2==1.1.0 pylint==1.4.5
 
 script:
+    # Helps debugging
+    - export
+    # Test building docs
     - cd docs && make html; cd ..
     - unit2 -vfc
-    # FIXME: This throws a python traceback
-    # - for playbook in *.yml; do echo -e "\n$playbook:\n"; ansible-lint "$playbook"; done
+    # Check for some typos / git commit problems
+    - for i in $TYPOS; do echo; echo "$i"; git log -1 -p HEAD^ | grep -a -2 "$i"; test "$?" == "1" || exit 1; done
+    - ./test_exekutir_xn.sh

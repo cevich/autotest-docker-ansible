@@ -2,9 +2,6 @@
 *~
 .*.swp
 *.pyc
+*.pyo
 *.retry
-host_vars/*
 docs/build
-hosts
-workspace
-files/*private*
