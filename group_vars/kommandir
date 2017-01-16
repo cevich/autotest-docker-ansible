@@ -11,11 +11,12 @@ kommandir_openstack:
     # Must be a name, not a UUID
     image: "CentOS-Atomic-7"
     tenant_name: "{{ _private_kommandir_tenant_name }}"
-    # Needed for older openstack CLI
+    # Needed for older openstack CLI (nova).  Should be the network/mask of the
+    # floating ip pool assigned to your project.
     legacy_floating_ip_pool: "{{ [_private_legacy_floating_ip_pool | default(omit)] }}"
     # Userdata to supply to cloud-init
     userdata:
-        # Because I'm self-centered
+        # Because I'm self-centered (really, it's b/c all my servers are here)
         timezone: US/Eastern
         # Don't add silly 'please login as' to root's .ssh/authorized_keys
         disable_root: false
