@@ -70,6 +70,3 @@
     - role: rebooted
       run_more_than_once: "baz"
       when: needs_reboot == True
-
-    # Must be very last role
-    - touchstone

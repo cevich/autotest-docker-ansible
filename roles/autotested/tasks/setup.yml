@@ -1,0 +1,100 @@
+---
+
+# Depends:
+#   - no_log_synchronize
+#   - ...others....
+
+- name: Make sure docker client is working
+  command: docker version
+
+- name: Autotest directory is removed
+  file:
+    path: "{{ autotest_dest_dir }}"
+    state: absent
+
+- name: Cached Autotest is copied
+  synchronize:
+    dest: "{{ autotest_dest_dir }}"
+    src: "{{ docker_autotest_cache_dir }}/autotest/"
+    rsync_opts:
+        - "--exclude=.git"
+  no_log: '{{ no_log_synchronize | default(true) }}'
+
+- name: Untracked RELEASE-VERSION is removed
+  file:
+    path: "{{ autotest_dest_dir }}/RELEASE-VERSION"
+    state: absent
+
+- name: Bundled Docker Autotest directory is removed
+  file:
+    path: "{{ autotest_docker_path }}"
+    state: absent
+
+- name: Cached Docker Autotest is copied
+  synchronize:
+    dest: "{{ autotest_docker_path }}"
+    src: "{{ docker_autotest_cache_dir }}/autotest-docker/"
+    rsync_opts:
+        - "--exclude=.git"
+  no_log: '{{ no_log_synchronize | default(true) }}'
+
+- name: Cached bugzilla module is copied
+  synchronize:
+    dest: "{{ autotest_docker_path }}"
+    src: "{{ docker_autotest_cache_dir }}/python-bugzilla/bugzilla"
+    rsync_opts:
+        - "--exclude=.git"
+  no_log: '{{ no_log_synchronize | default(true) }}'
+  when: docker_autotest.enable_bugzilla is undefined or
+        docker_autotest.enable_bugzilla
+
+- name: Custom configuration is cleared
+  file:
+  args:
+    path: "{{ autotest_docker_path }}/config_custom"
+    state: absent
+
+- name: Custom configuration directory exists
+  file:
+  args:
+    path: "{{ autotest_docker_path }}/config_custom"
+    state: directory
+
+- include: test_image_fqin.yml
+
+# Hook for inclusion of additional configuration templates/files
+- name: Resolve docker_autotest templates
+  template:
+  args:
+    dest: "{{ item.dest | default(omit) }}"
+    follow: "{{ item.follow | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+    owner: "{{ item.owner | default(omit) }}"
+    selevel: "{{ item.selevel | default(omit) }}"
+    serole: "{{ item.serole | default(omit) }}"
+    setype: "{{ item.setype | default(omit) }}"
+    seuser: "{{ item.seuser | default(omit) }}"
+    src: "{{ item.src | default(omit) }}"
+    validate: "{{ item.validate | default(omit) }}"
+  with_items: '{{ docker_autotest.templates }}'
+  when: docker_autotest.templates is defined and
+        docker_autotest.templates not in [[], '', None]
+
+- include: configure_defaults.yml
+
+- include: configure_control.yml
+
+- name: Results directory is empty
+  file:
+  args:
+    path: "{{ autotest_dest_dir }}/client/results"
+    state: absent
+  when: docker_autotest.execute
+
+# There must always be a results.junit file if autotest was suppose to run
+- include: roles/autotested/tasks/all_fail.yml
+  vars:
+    failure_component: autotest
+    failure_message: "Either autotest itself or a results conversion script failed"
+  when: docker_autotest.execute
