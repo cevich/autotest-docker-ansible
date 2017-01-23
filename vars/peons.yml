@@ -19,40 +19,5 @@
 
 peons:
     # Docker Current (default extra_groups == ["docker"])
-    - name: "fedora"
-      defaults: "fedora"
-
-    - name: "fedoratomic"
-      defaults: "fedoratomic"
-
     - name: "rhel"
       defaults: "rhel"
-
-    - name: "rhelatomic"
-      defaults: "rhelatomic"
-
-    - name: "centos"
-      defaults: "centos"
-
-    - name: "centosatomic"
-      defaults: "centosatomic"
-
-    # Docker latest
-    - name: "rhel_latest"
-      defaults: "rhel"
-      extra_groups: ["docker-latest"]
-
-    - name: "rhelatomic_latest"
-      defaults: "rhelatomic"
-      userdata: '{{ docker_latest_userdata }}'
-      extra_groups: ["docker-latest"]
-
-    - name: "centos_latest"
-      defaults: "centos"
-      extra_groups: ["docker-latest"]
-
-    - name: "centosatomic_latest"
-      defaults: "centosatomic"
-      userdata: '{{ docker_latest_userdata }}'
-      extra_groups: ["docker-latest"]
-
