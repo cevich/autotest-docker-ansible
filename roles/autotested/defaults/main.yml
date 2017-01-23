@@ -32,6 +32,11 @@ docker_autotest_templates:
     - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
       dest: "{{ autotest_docker_path }}/config_custom/control.ini"
 
+# List of copy module arg dictionaries, empty for none
+# e.g. - dest: "subtests/secret/sauce"
+#        src: "/path/to/secret/sauce/source"
+docker_autotest_copies: []
+
 docker_autotest:
 
     # Many tests rely on a default image for testing. Specify
