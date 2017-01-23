@@ -17,8 +17,7 @@ docker_autotest:
         name:
         tag:
         build_url:
-    preserve_fqins:
-        - "docer.io/fedora:latest"
+    preserve_fqins: []
     preserve_cnames: []
     execute: true
     enable_bugzilla: true
