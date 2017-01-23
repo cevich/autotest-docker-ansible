@@ -23,6 +23,15 @@ preserve_fqins_cmd: ./config_value.py DEFAULTS preserve_fqins config_defaults/de
 # Command to use for retrieving preserve_cnames value
 preserve_cnames_cmd: ./config_value.py DEFAULTS preserve_cnames config_defaults/defaults.ini config_custom/defaults.ini
 
+# List of template module arg dictionaries, empty for none
+# e.g. - dest: "config_custom/tests.ini"
+#        src: "tests.ini.j2"
+docker_autotest_templates:
+    - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
+      dest: "{{ autotest_docker_path }}/config_custom/subtests.ini"
+    - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
+      dest: "{{ autotest_docker_path }}/config_custom/control.ini"
+
 docker_autotest:
 
     # Many tests rely on a default image for testing. Specify
@@ -36,15 +45,6 @@ docker_autotest:
         # Build this image from url, tagged as above name.
         # Leave empty to pull test image instead.
         build_url:
-
-    # List of template arg dictionaries use, empty for none
-    # e.g. - dest: "config_custom/tests.ini"
-    #        src: "tests.ini.j2"
-    templates:
-        - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
-          dest: "{{ autotest_docker_path }}/config_custom/subtests.ini"
-        - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
-          dest: "{{ autotest_docker_path }}/config_custom/control.ini"
 
     # List of fqins to protect from removal during all tests
     preserve_fqins: []

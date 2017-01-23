@@ -77,9 +77,9 @@
     seuser: "{{ item.seuser | default(omit) }}"
     src: "{{ item.src | default(omit) }}"
     validate: "{{ item.validate | default(omit) }}"
-  with_items: '{{ docker_autotest.templates }}'
-  when: docker_autotest.templates is defined and
-        docker_autotest.templates not in [[], '', None]
+  with_items: '{{ docker_autotest_templates }}'
+  when: docker_autotest_templates is defined and
+        docker_autotest_templates not in [[], '', None]
 
 - include: configure_defaults.yml
 
