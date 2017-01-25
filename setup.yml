@@ -15,8 +15,13 @@
 
 - include: peons.yml
 
-# TODO actually do the setup steps here instead of in run
-# - hosts: autotested:&{{ adept_job }}
-#   any_errors_fatal: true
-#   roles:
-#     - role: autotested
+- hosts: autotested:&{{ adept_job }}
+  any_errors_fatal: true
+  roles:
+    - role: autotested
+      when: docker_autotest is defined
+
+- hosts: peons:&{{ adept_job }}
+  roles:
+    # Must be very last role, determines some behaviors in run transition
+    - touchstone

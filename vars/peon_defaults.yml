@@ -54,23 +54,6 @@ peon_defaults:
 
     fedora:
       volume: "20"
-      version: "24"
-      groups:
-        - fedora
-        - autotested
-        - peons
-        - updated
-
-    fedoratomic:
-      version: "24"
-      groups:
-        - fedoratomic
-        - atomic_upgrade
-        - autotested
-        - peons
-
-    fedora:
-      volume: "20"
       version: "25"
       groups:
         - fedora

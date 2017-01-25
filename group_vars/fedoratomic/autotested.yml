@@ -1,5 +1,11 @@
 ---
 
+docker_autotest_templates:
+    - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
+      dest: "{{ autotest_docker_path }}/config_custom/subtests.ini"
+    - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
+      dest: "{{ autotest_docker_path }}/config_custom/control.ini"
+
 docker_autotest:
     # FIXME: This should be using the fedora image, but it's missing python2
     # so a build_url should point at a dockerfile that takes care of this.
@@ -11,13 +17,7 @@ docker_autotest:
         name:
         tag:
         build_url:
-    templates:
-        - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
-          dest: "{{ autotest_docker_path }}/config_custom/subtests.ini"
-        - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
-          dest: "{{ autotest_docker_path }}/config_custom/control.ini"
-    preserve_fqins:
-        - "docer.io/fedora:latest"
+    preserve_fqins: []
     preserve_cnames: []
     execute: true
     enable_bugzilla: true
