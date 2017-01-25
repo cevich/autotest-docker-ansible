@@ -1,7 +1,7 @@
 ---
 
-- include: roles/slave/tasks/setup.yml
+- include: roles/autotested/tasks/setup.yml
   when: adept_context == 'setup'
 
-- include: roles/slave/tasks/run.yml
+- include: roles/autotested/tasks/run.yml
   when: adept_context == 'run'
