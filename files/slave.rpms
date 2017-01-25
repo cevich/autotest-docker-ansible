@@ -1,4 +1,3 @@
-ansible
 python2-shade
 python-heatclient
 heat-cfntools
@@ -8,6 +7,8 @@ git
 sed
 iputils
 vim
+findutils
+python-setuptools
 python-dogpile-core
 python-swiftclient
 python-heatclient
