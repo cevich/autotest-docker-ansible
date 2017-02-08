@@ -27,7 +27,7 @@ to perform all remaining operations.
 
 Finally, in addition to tearing down / cleaning up testing resources,
 all the runtime details and results are synchronized back to the initial
-system - the "exekutir" (again, hammer and chisel spelling conveys importance)
+system - the "exekutir" (again, hammer and chisel spelling to convey importance)
 
 .. _autotest: http://autotest.github.io/
 .. _`docker autotest`: https://github.com/autotest/autotest-docker
