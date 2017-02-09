@@ -81,7 +81,7 @@
     contexts:
         - setup
         - run
-    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}.yml"
+    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}_before_job.yml"
     inventory: "${WORKSPACE}/inventory"
     varsfile: "${WORKSPACE}/variables.yml"
 
@@ -98,7 +98,7 @@
 - command:
     filepath: "/bin/bash"
     # __exekutir__/roles/common/tasks/main.yml depends on this filename
-    exitfile: "$WORKSPACE/kommandir_adept_${ADEPT_CONTEXT}.exit"
+    exitfile: "$WORKSPACE/kommandir_${ADEPT_CONTEXT}.exit"
     arguments: >
         -c 'cd "${WORKSPACE}/kommandir_workspace";
             # variables.yml produced by kommandir_workspace_setup role
@@ -148,7 +148,7 @@
 #             kommandir uptime > 1 day:  destroy kommandir
 #       - cleanup unnecessary files from workspace
 - playbook:
-    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}.yml"
+    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}_after_job.yml"
     inventory: "${WORKSPACE}/inventory"
     # Do not fail this adept.py execution with an exit code
     exitfile: "${WORKSPACE}/exekutir_${ADEPT_CONTEXT}.exit"
