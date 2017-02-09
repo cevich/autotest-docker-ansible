@@ -86,7 +86,7 @@
 - name: Buffer job_xn_done flag checking command only on exekutir
   set_fact:
     # Don't pollute variable namespace, recycle 'result' for temporary use.
-    result: "test -r {{ hostvars.exekutir.workspace }}/kommandir_adept_{{ hostvars.exekutir.adept_context }}.exit; echo $?"
+    result: "test -r {{ hostvars.exekutir.workspace }}/kommandir_{{ hostvars.exekutir.adept_context }}.exit; echo $?"
   when: inventory_hostname == "exekutir"
 
 - name: Set job_xn_done true on exekutir because kommandir's job.xn has run

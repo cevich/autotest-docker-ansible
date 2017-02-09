@@ -38,6 +38,13 @@ cat $WORKSPACE/kommandir_workspace/variables.yml
 
 for context in setup run cleanup
 do
+    for name in exekutir kommandir
+    do
+        echo "Checking $name exit files for $context context contains 0"
+        EXIT_CODE=$(cat $WORKSPACE/${name}_${context}.exit)
+        [ "$EXIT_CODE" -eq "0" ] || exit 1
+    done
+
     echo "Checking contents of test_file_from_${context}.txt"
     grep -q "This is the travis_ci job's test play, running on kommandir for the $context context" $WORKSPACE/kommandir_workspace/test_file_from_${context}.txt
 done

@@ -1,0 +1,10 @@
+---
+
+- hosts: kommandir
+  force_handlers: True
+  roles:
+    - kommandir_to_exekutir_sync
+    - role: exekutir_lock
+      lock_type: "shared"
+      lock_release: True
+  # Shared lock is released by handler
