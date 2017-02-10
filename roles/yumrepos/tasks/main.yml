@@ -15,7 +15,7 @@
     name: "{{ item.name | mandatory }}"
     baseurl: "{{ item.baseurl }}"
     description: "Ansible added {{ item.name | mandatory }} repo"
-    gpgcheck: "{{ item.exclude | default(False) }}"
+    gpgcheck: "{{ item.gpgcheck | default(True) }}"
     exclude: "{{ item.excludepkgs | default(omit) }}"
     includepkgs: "{{ item.includepkgs | default(omit) }}"
     metadata_expire: 900  # quarter-hour
