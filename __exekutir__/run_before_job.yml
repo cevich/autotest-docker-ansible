@@ -6,7 +6,6 @@
 
 - hosts: kommandir
   tasks:
-    - common
     # Block job.xn w/o complete & successful setup
     - assert:
         that: 'lookup("file","{{ workspace }}/exekutir_setup.exit") == "0"'
