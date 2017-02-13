@@ -38,6 +38,7 @@
 
 - hosts: kommandir
   roles:
+    - common
     # One-time setup, then synchronizes from exekutir -> kommandir
     - kommandir_workspace_setup
     # In case job.xn fails, local copy matches remote

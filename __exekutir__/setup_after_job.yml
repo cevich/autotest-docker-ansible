@@ -3,6 +3,7 @@
 - hosts: kommandir
   force_handlers: True
   roles:
+    - common
     - kommandir_to_exekutir_sync
     - role: exekutir_lock
       lock_type: "shared"
