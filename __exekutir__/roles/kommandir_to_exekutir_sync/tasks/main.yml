@@ -8,7 +8,6 @@
     that:
         - 'inventory_hostname == "kommandir"'
         - 'kommandir_workspace is defined'
-        - 'job_xn_done'
         - 'hostvars.exekutir.kommandir_workspace is defined'
 
 - name: exekutir's copy of kommandir_workspace is kept in sync. with kommandir's for cloud_type != nocloud
@@ -22,7 +21,7 @@
     dest: "{{ hostvars.exekutir.workspace }}"
   when: '"nocloud" not in group_names'
 
-- name: Kommandir's kommandir_workspace_dirty flag set true in host_vars file
+- name: Kommandir's kommandir_workspace_dirty set true to force remote re-initialization
   lineinfile:
     dest: "{{ hostvarsfile }}"
     insertafter: EOF
