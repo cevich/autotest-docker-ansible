@@ -1,0 +1,11 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# Any environment variables needed for cloud_destruction_command
+cloud_environment: {}
+
+# This may contain any argument supported by the 'shell' module
+cloud_destruction_command: {}

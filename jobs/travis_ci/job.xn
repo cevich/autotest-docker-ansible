@@ -1,0 +1,12 @@
+---
+# vim-syntax: yaml
+
+# Set up fake cache to avoid needing to clone repos during CI testing of ADEPT
+- command:
+    filepath: /bin/bash
+    arguments: -c 'mkdir -p $WORKSPACE/cache && date > $WORKSPACE/cache/junk'
+
+- playbook:
+    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}.yml"
+    inventory: "${WORKSPACE}/inventory"
+    varsfile: "${WORKSPACE}/variables.yml"

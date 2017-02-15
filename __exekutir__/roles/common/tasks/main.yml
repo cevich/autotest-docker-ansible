@@ -1,0 +1,140 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# N/B: exekutir == localhost == primary/top-level adept.py caller
+#      kommandir ?= exekutir ?= other host
+
+- assert:
+    that:
+        # Required variables for all hosts
+        - "inventory_hostname in ['exekutir','kommandir']"
+        - "hostvarsfile is defined"
+        - "cloud_type is defined"
+        # Set in exekutir.xn
+        - "ANSIBLE_PRIVATE_KEY_FILE is defined"
+        - "ANSIBLE_CONFIG is defined"
+        # These are set automaticly by adept.py
+        - "workspace is defined"
+        - "adept_path is defined"
+        - "adept_context is defined"
+
+- assert:
+    that:
+        # Only for exekutir
+        - "uuid is defined"
+        - "job_path is defined"
+        - "job_name is defined"
+        - "default_kommandir_name is defined"
+        - "kommandir_hostup_timeout is defined"
+        - "kommandir_workspace is defined"
+        # prevent setup/run after cleanup has finished
+        - 'adept_context == "cleanup" or lookup("pipe","test -r $WORKSPACE/exekutir_cleanup.exit; echo $?") == "1"'
+  when: 'inventory_hostname == "exekutir"'
+
+
+- name: The adept_debug variable defaults to False when undefined or non-boolean.
+  set_fact:
+    adept_debug: False
+  when: adept_debug is undefined or
+        adept_debug in [None, '', [], {}]
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["uuid","job_path","job_name","adept_context"]
+
+- name: kommandir_name is set with a prefix on exekutir
+  set_fact:
+    kommandir_name: "{{ hostvars.exekutir.kommandir_name_prefix }}_{{ hostvars.exekutir.default_kommandir_name }}"
+  when: hostvars.exekutir.kommandir_name_prefix is defined and
+        hostvars.exekutir.kommandir_name_prefix not in ["",None,[],{}] and
+        inventory_hostname == "exekutir"
+
+- name: kommandir_name is set without a prefix on exekutir
+  set_fact:
+    kommandir_name: "{{ hostvars.exekutir.default_kommandir_name }}"
+  when: kommandir_name is undefined and
+        inventory_hostname == "exekutir"
+
+- name: Kommandir knows it's own name
+  set_fact:
+    kommandir_name: "{{ hostvars.exekutir.kommandir_name }}"
+  when: kommandir_name is undefined and
+        inventory_hostname == "kommandir"
+
+# Applied to all hosts in the inventory.  At this point,
+# any variables defined in {{workspace}}/inventory/group_vars/{{cloud_type}}
+# will be hauled in.  Unless they conflict with host_vars or
+# command-line variables (which have higher scope).
+- name: Hosts are grouped by cloud_type variable content
+  group_by:
+    key: "{{ cloud_type }}"
+
+
+- name: Initialize job_xn_done and exekutir_setup_done flags false
+  set_fact:
+    job_xn_done: False
+
+# setup, run and cleanup.yml playbooks run _twice_ per context
+# transition.  One time before the kommandir's job.xn, and a
+# second time after.  This flag is set true, when the playbook
+# is running at the end of the transition.
+- name: Buffer job_xn_done flag checking command only on exekutir
+  set_fact:
+    # Don't pollute variable namespace, recycle 'result' for temporary use.
+    result: "test -r {{ hostvars.exekutir.workspace }}/kommandir_{{ hostvars.exekutir.adept_context }}.exit; echo $?"
+  when: inventory_hostname == "exekutir"
+
+- name: Set job_xn_done true on exekutir because kommandir's job.xn has run
+  set_fact:
+    job_xn_done: True
+  when: inventory_hostname == "exekutir" and
+        lookup("pipe", result) == "0"
+
+- name: Set job_xn_done kommandir to match value on exekutir
+  set_fact:
+    job_xn_done: "{{ hostvars.exekutir.job_xn_done }}"
+  when: inventory_hostname == "kommandir"
+
+
+- name: Kommandir's kommandir_workspace is set to /home/uuid for cloud_type != 'nocloud'
+  set_fact:
+    kommandir_workspace: "/home/{{ uuid }}"
+  when: inventory_hostname == "kommandir" and
+        "nocloud" not in group_names
+
+- name: Kommandir's kommandir_workspace is set to exekutir's kommandir_workspace when cloud_t
+  set_fact:
+    kommandir_workspace: '{{ hostvars.exekutir.kommandir_workspace }}'
+  when: inventory_hostname == "kommandir" and
+        "nocloud" in group_names
+
+
+- name: Hosts host_vars file has job_name and uuid hard-coded for persistence
+  lineinfile:
+    dest: "{{ hostvarsfile }}"
+    insertafter: EOF
+    line: "{{ item.line }}"
+    regexp: "{{ item.regexp }}"
+    state: present
+  # Must be done on exekutir
+  delegate_to: exekutir
+  with_items:
+    # These values must persist across all transitions.
+    - line: "uuid: {{ hostvars.exekutir.uuid }}"
+      regexp: "^uuid:.*"
+    - line: "job_name: {{ hostvars.exekutir.job_name }}"
+      regexp: "^job_name:.*"
+  # Only do this once, right at the very beginning
+  when: not job_xn_done and adept_context == "setup"
+
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["workspace","kommandir_name","cloud_type","job_xn_done","hostvarsfile","kommandir_workspace","inventory_hostname","group_names","groups","adept_optional","adept_path"]

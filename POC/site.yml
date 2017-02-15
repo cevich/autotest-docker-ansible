@@ -1,0 +1,21 @@
+---
+
+# This demonstrates that you can query variables from other inventory hosts
+# indirectly by their group-membership.  Meaning, there is no need to have
+# any sort of topology or description file for non-existant hosts.  All
+# their details can simply be encoded into the host_vars/*.yml files.
+
+# ansible-playbook -i inventory -c local -l localhost site.yml
+
+- hosts: localhost
+  gather_facts: False
+  pre_tasks:
+    - name: Localhost is setup
+      setup:
+        gather_subset: network
+  tasks:
+    - debug:
+        msg: |
+            inventory_hostname: {{ hostvars[item].inventory_hostname }}
+            touchstone: {{ hostvars[item].touchstone }}
+      with_items: "{{ groups['peons'] }}"

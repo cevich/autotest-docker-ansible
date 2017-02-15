@@ -1,0 +1,4 @@
+---
+
+pre_raw_cmds:
+    - dnf install -y python python-simplejson python2 python2-dnf libselinux-python

@@ -1,0 +1,21 @@
+---
+
+_d_a_t_path: "/var/lib/autotest/client/tests/docker"
+
+docker_autotest:
+    test_image:
+        host: "registry.access.redhat.com"
+        user: "rhel7"
+        name: "rhel"
+        tag: "latest"
+        build_url:
+    templates:
+        - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
+          dest: "{{ _d_a_t_path }}/config_custom/subtests.ini"
+        - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
+          dest: "{{ _d_a_t_path }}/config_custom/control.ini"
+    preserve_fqins:
+        - "registry.access.redhat.com/rhel7/rhel:latest"
+    preserve_cnames: []
+    execute: true
+    enable_bugzilla: true

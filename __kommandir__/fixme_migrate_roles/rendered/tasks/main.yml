@@ -1,0 +1,20 @@
+---
+
+- name: templates are rendered
+  template:
+  args:
+    dest: "{{ item.dest | default(omit) }}"
+    follow: "{{ item.follow | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+    owner: "{{ item.owner | default(omit) }}"
+    selevel: "{{ item.selevel | default(omit) }}"
+    serole: "{{ item.serole | default(omit) }}"
+    setype: "{{ item.setype | default(omit) }}"
+    seuser: "{{ item.seuser | default(omit) }}"
+    src: "{{ item.src | default(omit) }}"
+    validate: "{{ item.validate | default(omit) }}"
+  with_items:
+    - '{{ rendered_templates }}'
+  when: rendered_templates is defined and
+        rendered_templates != []

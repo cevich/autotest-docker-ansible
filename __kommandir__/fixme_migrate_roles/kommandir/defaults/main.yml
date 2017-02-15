@@ -1,0 +1,17 @@
+---
+
+# Type of cloud to use to create kommandir
+kommandir_type: openstack
+
+# Specifics for kommandir_type == openstack
+kommandir_openstack:
+    auth_url:
+    username:
+    password:
+    # Name of the image, not UUID
+    image:
+    tenant_name:
+    # Needed for older openstack CLI
+    legacy_floating_ip_pool:
+    # Userdata to supply to cloud-init
+    userdata: {}
