@@ -9,7 +9,7 @@
         - "inventory_hostname == 'exekutir'"
         - "job_xn_done"
 
-- name: kommandir_destruction_command is executed
+- name: cloud_destruction_command is executed
   shell: "{{ item.command | mandatory }}"
   environment: "{{ kommandir_destruction_environment }}"
   args:
@@ -20,4 +20,4 @@
   # This can fail for numerous reasons, pretend we don't care
   ignore_errors: True
   register: result
-  with_dict: "{{ kommandir_destruction_command }}"
+  with_dict: "{{ cloud_destruction_command }}"
