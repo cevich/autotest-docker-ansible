@@ -3,6 +3,8 @@
 - hosts: exekutir
   # Assume inventory is incomplete (kommandir is unreachable)
   gather_facts: False
+  # Guarantee immediate non-zero exit, do not continue w/ other hosts
+  any_errors_fatal: true
   pre_tasks:
     - name: Gather exekutir facts exclusive of other inventory hosts
       setup:
@@ -20,6 +22,8 @@
   gather_facts: False
   # Ensure exclusive lock is released, even on role failure
   force_handlers: True
+  # Guarantee immediate non-zero exit, do not continue w/ other hosts
+  any_errors_fatal: true
   roles:
     - common
     - role: exekutir_lock
@@ -37,6 +41,8 @@
   # Exclusive lock is released by handler, shared lock maintained
 
 - hosts: kommandir
+  # Guarantee immediate non-zero exit, do not continue w/ other hosts
+  any_errors_fatal: true
   roles:
     - common
     # One-time setup, then synchronizes from exekutir -> kommandir

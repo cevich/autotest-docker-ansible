@@ -6,7 +6,8 @@ set -e
 [ -z "$@" ] || ADEPT_OPTIONAL="$@"
 
 export WORKSPACE=$(mktemp -d --suffix=.adept.workspace)
-trap 'rm -rf $WORKSPACE' EXIT
+# Allow workspace inspection in debug mode
+echo "$@" | grep -q -v 'adept_debug' || trap 'rm -rf $WORKSPACE' EXIT
 
 cat << EOF > $WORKSPACE/variables.yml
 ---
@@ -28,13 +29,22 @@ mkdir -p $WORKSPACE/cache && date > $WORKSPACE/cache/junk.txt
     ./adept.py run $WORKSPACE exekutir.xn $ADEPT_OPTIONAL && \
     ./adept.py cleanup $WORKSPACE exekutir.xn $ADEPT_OPTIONAL
 
-echo "$(basename $0) Exit: $?"
+echo "adept.py exit: $?"
+echo
 echo "Workspace contents:"
 ls -la $WORKSPACE
+echo
 echo "Kommandir's workspace contents:"
 ls -la $WORKSPACE/kommandir_workspace
+echo
 echo "Variables.yml contents:"
 cat $WORKSPACE/kommandir_workspace/variables.yml
+
+echo
+echo "Examining exit files"
+
+echo "Checking kommandir discovery (before job.xn) cleanup exit file contains 0"
+[ "$(cat ${WORKSPACE}/exekutir_cleanup_before_job.exit)" == "0" ] || exit 1
 
 for context in setup run cleanup
 do

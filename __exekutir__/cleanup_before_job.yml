@@ -1,3 +1,41 @@
 ---
 
-- include: setup_before_job.yml
+- hosts: exekutir
+  gather_facts: False
+  pre_tasks:
+    - name: Gather exekutir facts exclusive of other inventory hosts
+      setup:
+  roles:
+    - common
+    - ansible_versioned
+    - compatible_ansible
+    - exekutir_workspace_setup
+    - role: inventory_updated
+      inventory_hostnames:
+        - exekutir
+
+- hosts: kommandir
+  gather_facts: False
+  force_handlers: True
+  roles:
+    - common
+    - role: exekutir_lock
+      lock_type: "exclusive"
+    - kommandir_discovered
+    - role: inventory_updated
+      inventory_hostnames:
+        - kommandir
+        - exekutir
+    - kommandir_up
+    - kommandir_installed
+    - role: exekutir_lock
+      lock_type: "shared"
+      lock_release: False
+  # Exclusive lock is released by handler, shared lock maintained
+
+- hosts: kommandir
+  roles:
+    - common
+    - kommandir_workspace_setup
+    - kommandir_to_exekutir_sync
+  # Shared lock is maintained

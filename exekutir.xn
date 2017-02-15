@@ -85,6 +85,20 @@
     inventory: "${WORKSPACE}/inventory"
     varsfile: "${WORKSPACE}/variables.yml"
 
+# Pre-job.xn cleanup must be allowed to fail so post-job.xn cleanup may run
+# Transition summary:
+#   cleanup:
+#      - Setup exekutirs workspace, find or create kommandir.
+#      - Setup & sync. exekutir workspace to kommandir workspace.
+- playbook:
+    contexts:
+        - cleanup
+    filepath: "${WORKSPACE}/cleanup_before_job.yml"
+    inventory: "${WORKSPACE}/inventory"
+    varsfile: "${WORKSPACE}/variables.yml"
+    # Special case, do not exit on non-zero, dump to a file for inspection
+    exitfile: "${WORKSPACE}/exekutir_cleanup_before_job.exit"
+
 # Nested call to adept.py on kommandir, exit code is ignored
 # but it is written to a file.
 # Transition summary:
@@ -100,7 +114,19 @@
     # __exekutir__/roles/common/tasks/main.yml depends on this filename
     exitfile: "$WORKSPACE/kommandir_${ADEPT_CONTEXT}.exit"
     arguments: >
-        -c 'cd "${WORKSPACE}/kommandir_workspace";
+        -c 'cd "$WORKSPACE";
+            CLEANUP_BEFORE_FILE="exekutir_cleanup_before_job.exit";
+            # Do not run job.xn cleanup if kommandir discover/create failed
+            if [ -r "$CLEANUP_BEFORE_FILE" ] && \
+               [ "$(cat $CLEANUP_BEFORE_FILE)" != "0" ];
+            then
+                echo "WARNING: Discover/create kommandir for cleanup failed.";
+                echo "Non-zero exit code in $CLEANUP_BEFORE_FILE";
+                echo "NOT running kommandir job.xn";
+                exit 0;
+            fi;
+
+            cd "${WORKSPACE}/kommandir_workspace";
             # variables.yml produced by kommandir_workspace_setup role
             export UUID=$(grep -s -x -m 1 -e "^uuid: .*$" variables.yml | cut -d: -f2 | tr -d [:blank:]);
             echo "Job UUID=$UUID";
@@ -135,7 +161,7 @@
             echo "Returning from nested adept.py job.xn, exit code: $RET";
             exit $RET;'
 
-# For all contexts, ignore exit code, but write it to a file.
+# For all contexts, ignore exit code, always attempt to sync. to exekutir
 # Context Transition summary:
 #   setup:
 #       - sync. kommandir workspace to exekutir
@@ -150,6 +176,5 @@
 - playbook:
     filepath: "${WORKSPACE}/${ADEPT_CONTEXT}_after_job.yml"
     inventory: "${WORKSPACE}/inventory"
-    # Do not fail this adept.py execution with an exit code
     exitfile: "${WORKSPACE}/exekutir_${ADEPT_CONTEXT}.exit"
     varsfile: "${WORKSPACE}/variables.yml"
