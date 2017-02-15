@@ -10,7 +10,7 @@ trap 'rm -rf $WORKSPACE' EXIT
 
 cat << EOF > $WORKSPACE/variables.yml
 ---
-job_path: $PWD/jobs/travis_ci
+job_path: $PWD/__jobs__/travis_ci
 uuid: something_i_made_up_for_travis_ci
 cloud_type: nocloud
 repo_rpms: []
