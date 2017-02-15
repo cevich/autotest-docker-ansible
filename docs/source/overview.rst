@@ -3,18 +3,18 @@ Operational Overview
 
 FIXME: rough-draft
 
-* Fundimental setup of exekutir's ssh keys, and copying __exekutir__ dir.
-  into $WORKSPACE.
-
 * The 'setup' context transition
 
-    * Intermediate exekutir setup, check ansible version, setup
-      separate kommandir workspace source directory.
+    * Fundimental setup of exekutir's ssh keys, and copying __exekutir__ dir.
+      into $WORKSPACE.  (exekutir.xn)
 
-    * Exekutir acquires exclusive lock
+    * Intermediate exekutir setup, check ansible version, setup
+      separate kommandir workspace source directory. (setup_before_job.yml)
+
+    * Exekutir acquires exclusive lock 
 
         * Create or discover the kommandir VM by running a script.  YAML
-          output from script updates kommandir's variables.
+          output from script updates kommandir's host_vars in inventory.
 
         * Wait for Kommandir to ping, and test ability to run "sleep 0.1".
 
@@ -39,20 +39,20 @@ FIXME: rough-draft
 
         * Remotely run job.xn on kommandir.  Presumed this will
           provision and install all peon VMs (in parallel), deploying
-          cache contents to them, and prepare them for testing.
+          cache contents to them, and prepare them for testing. (exekutir.xn)
 
         * For remote kommandir's, rsync workspace back to exekutir's
-          copy.
+          copy. (setup_after_job.yml)
 
-    * Exekutir releases shared lock
+    * Exekutir releases shared lock (setup_after_job.yml)
 
 
 * The 'run' context transition
 
-    * Exekutir acquires exclusive lock
+    * Exekutir acquires exclusive lock (run_before_job.yml)
 
         * Create or discover the kommandir VM by running a script.  YAML
-          output from script updates kommandir's variables.
+          output from script updates kommandir's variables. 
 
         * Wait for Kommandir to ping, and test ability to run "sleep 0.1".
 
@@ -63,15 +63,16 @@ FIXME: rough-draft
 
     * Exekutir releases exclusive lock (maintaining shared lock)
 
-        * For remote kommandir's, destructive rsync exekutir's
+        * For remote kommandir's, rsync exekutir's
           copy of kommandir's workspace to kommandir.
 
         * Remotely run job.xn on kommandir.  Presumed this will
           execute testing on all peons in parallel, then package
           up all result files in kommandir's workspace.
+          (exekutir.xn -> job.xn)
 
         * For remote kommandir's, rsync workspace back to exekutir's
-          copy.
+          copy. (run_after_job.yml)
 
     * Exekutir releases shared lock
 
@@ -79,7 +80,7 @@ FIXME: rough-draft
    not setup or run happened or completed successfully.  Must be
    very tolerant of missing files and unexpected state.
 
-    * Exekutir acquires exclusive lock
+    * Exekutir acquires exclusive lock (cleanup_before_job.yml)
 
         * Create or discover the kommandir VM by running a script.  YAML
           output from script updates kommandir's variables.
@@ -93,17 +94,17 @@ FIXME: rough-draft
 
     * Exekutir releases exclusive lock (maintaining shared lock)
 
-        * For remote kommandir's, destructive rsync exekutir's
+        * For remote kommandir's, rsync exekutir's
           copy of kommandir's workspace to kommandir.  Failure
-          blocks next step.
+          blocks next step. 
 
         * Remotely run job.xn on kommandir.  Presumed this will
           destroy all peons and release any other resources
           (extra storage volumes, networking, etc.).  Failure
-          does NOT block next step.
+          does NOT block next step. (exekutir.xn -> job.xn)
 
         * For remote kommandir's, rsync workspace back to exekutir's
-          copy.  Failure possible, but unlikely
+          copy.  (cleanup_after_job.yml)
 
     * Exekutir releases shared lock
 
@@ -119,3 +120,7 @@ FIXME: rough-draft
           disk filling.
 
     * Exekutir releases exclusive lock
+
+    * Exekutir prunes it's copy of Kommandir's workspace, then it's own.
+      Removes cache, symlinks, copy of exekutir roles, exekutir playbooks,
+      and exekutir variables.yml (preserving kommandir's copy).
