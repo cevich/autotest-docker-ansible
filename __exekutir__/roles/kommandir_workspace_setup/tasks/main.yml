@@ -123,8 +123,9 @@
   git:
     repo: "{{ item.repo }}"
     dest: "{{ kommandir_workspace }}/cache/{{ item.cachepath }}"
-    # Shallow clone is much faster, two commits will cover a merge-commit
-    depth: "{{ item.depth | default(2) }}"
+    # Shallow clone is much faster, two commits will cover a merge-commit and will be set per repo.
+    # default(omit) to workaround failure with python-bugzilla repo
+    depth: "{{ item.depth | default(omit) }}"
     # HEAD is the default if not specified
     version: "{{ item.version | default(omit) }}"
     recursive: "{{ item.recursive | default(False) }}"

@@ -81,12 +81,13 @@ git_cache_args:
     - repo: "https://github.com/autotest/autotest.git"
       recursive: False
       cachepath: 'autotest'
+      depth: 2
     - repo: "https://github.com/autotest/autotest-docker.git"
       recursive: True
       cachepath: 'autotest-docker'
+      depth: 2
     - repo: "https://github.com/python-bugzilla/python-bugzilla.git"
       recursive: False
       cachepath: "python-bugzilla"
       # Need to fetch everything to find specific tagged version
-      depth:
       version: "v1.2.2"
