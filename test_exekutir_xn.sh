@@ -6,7 +6,8 @@ set -e
 [ -z "$@" ] || ADEPT_OPTIONAL="$@"
 
 export WORKSPACE=$(mktemp -d --suffix=.adept.workspace)
-trap 'rm -rf $WORKSPACE' EXIT
+# Allow workspace inspection in debug mode
+echo "$@" | grep -q -v 'adept_debug' || trap 'rm -rf $WORKSPACE' EXIT
 
 cat << EOF > $WORKSPACE/variables.yml
 ---
