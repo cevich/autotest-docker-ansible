@@ -151,13 +151,13 @@
     - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
 
 # Allow job_path sync (below) to overwite these if needed
-- name: The __kommandir__ playbook dir is syncd to kommandir if both kommandir_workspace_dirty flags set
+- name: The kommandir playbook dir is syncd to kommandir if both kommandir_workspace_dirty flags set
   synchronize:
     archive: true
     # Relative links wouldn't work afterwards
     copy_links: true
     # on the exekutir
-    src: "{{ hostvars.exekutir.adept_path}}/__kommandir__/"
+    src: "{{ hostvars.exekutir.adept_path}}/kommandir/"
     # On the kommandir
     dest: "{{ kommandir_workspace }}"
   when: hostvars.exekutir.kommandir_workspace_dirty and kommandir_workspace_dirty
@@ -165,7 +165,7 @@
     - "Kommandir's kommandir_workspace_dirty flag set false in host_vars file"
     - "Exekutir's kommandir_workspace_dirty flag set false in host_vars file"
 
-# Done after __kommandir__ sync to allow overwriting if needed
+# Done after kommandir sync to allow overwriting if needed
 # TODO: This could/should support deploying from a URL or tarball content
 #       to permit external/custom/private jobs.
 - name: Exekutir's job_path is sync. to kommandir's kommandir_workspace if both kommandir_workspace_dirty flags set
@@ -222,7 +222,7 @@
       # Escape addition of jinja2 template for later resolution.
       value: '{{ "{{ " }}ansible_host{{ " }}" }}"'
 
-# In case permissions were screwed up by __kommandir__ or job_path
+# In case permissions were screwed up in kommandir dir or job_path dir
 - name: Owner of ssh files (uuid) is buffered for cloud_type != nocloud
   set_fact:
     result: "{{ uuid }}"

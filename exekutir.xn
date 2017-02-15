@@ -13,10 +13,10 @@
         -c 'set -e;
             cd "$WORKSPACE";
             # Dont modify source files, transfer to workspace
-            echo "Copying ${ADEPT_PATH}/__exekutir__/ -> $WORKSPACE";
+            echo "Copying ${ADEPT_PATH}/exekutir/ -> $WORKSPACE";
             cp --target-directory="." \
                --recursive \
-               "${ADEPT_PATH}/__exekutir__/"*;
+               "${ADEPT_PATH}/exekutir/"*;
             echo "-----";
             echo "Contents of variables.yml -";
             [ ! -r "${WORKSPACE}/variables.yml" ] || cat "${WORKSPACE}/variables.yml";
@@ -111,7 +111,7 @@
 #       - Unconditionaly remove all peons and volumes
 - command:
     filepath: "/bin/bash"
-    # __exekutir__/roles/common/tasks/main.yml depends on this filename
+    # exekutir/roles/common/tasks/main.yml depends on this filename
     exitfile: "$WORKSPACE/kommandir_${ADEPT_CONTEXT}.exit"
     arguments: >
         -c 'cd "$WORKSPACE";

@@ -5,18 +5,18 @@ FIXME: rough-draft
 
 * The 'setup' context transition
 
-    * Fundimental setup of exekutir's ssh keys, and copying __exekutir__ dir.
-      into $WORKSPACE.  (exekutir.xn)
+    * Fundimental setup of exekutir's ssh keys, and copying ``exekutir`` dir.
+      into ``$WORKSPACE``.  (``exekutir.xn``)
 
     * Intermediate exekutir setup, check ansible version, setup
-      separate kommandir workspace source directory. (setup_before_job.yml)
+      separate kommandir workspace source directory. (``setup_before_job.yml``)
 
     * Exekutir acquires exclusive lock 
 
         * Create or discover the kommandir VM by running a script.  YAML
           output from script updates kommandir's host_vars in inventory.
 
-        * Wait for Kommandir to ping, and test ability to run "sleep 0.1".
+        * Wait for Kommandir to ping, and test ability to run ``sleep 0.1``.
 
         * Complete kommandir VM setup (if needed), install packages, 
           setup storage, etc.
@@ -25,11 +25,11 @@ FIXME: rough-draft
 
     * Exekutir releases exclusive lock (maintaining shared lock)
 
-        * Create user on kommandir named $UUID, home dir is workspace.
+        * Create user on kommandir named ``$UUID``, home dir is workspace.
           (or just keep using the local kommandir_workspace sub-directory
-          if "nocloud" kommandir).
+          if ``nocloud`` kommandir).
 
-        * Recursively copy contents of job_path into kommandir's workspace.
+        * Recursively copy contents of ``job_path`` into kommandir's workspace.
 
         * Fill kommandir workspace cache with bits common across all
           (eventual) peons- autotest, docker autotest, etc.
@@ -37,24 +37,24 @@ FIXME: rough-draft
         * For remote kommandir's, rsync workspace back to exekutir's
           copy (in case the next step fails).
 
-        * Remotely run job.xn on kommandir.  Presumed this will
+        * Remotely run ``job.xn`` on kommandir.  Presumed this will
           provision and install all peon VMs (in parallel), deploying
           cache contents to them, and prepare them for testing. (exekutir.xn)
 
         * For remote kommandir's, rsync workspace back to exekutir's
-          copy. (setup_after_job.yml)
+          copy. (``setup_after_job.yml``)
 
-    * Exekutir releases shared lock (setup_after_job.yml)
+    * Exekutir releases shared lock (``setup_after_job.yml``)
 
 
 * The 'run' context transition
 
-    * Exekutir acquires exclusive lock (run_before_job.yml)
+    * Exekutir acquires exclusive lock (``run_before_job.yml``)
 
         * Create or discover the kommandir VM by running a script.  YAML
           output from script updates kommandir's variables. 
 
-        * Wait for Kommandir to ping, and test ability to run "sleep 0.1".
+        * Wait for Kommandir to ping, and test ability to run ``sleep 0.1``.
 
         * Complete kommandir VM setup (if needed), install packages, 
           setup storage, etc.
@@ -66,13 +66,13 @@ FIXME: rough-draft
         * For remote kommandir's, rsync exekutir's
           copy of kommandir's workspace to kommandir.
 
-        * Remotely run job.xn on kommandir.  Presumed this will
+        * Remotely run ``job.xn`` on kommandir.  Presumed this will
           execute testing on all peons in parallel, then package
           up all result files in kommandir's workspace.
-          (exekutir.xn -> job.xn)
+          (``exekutir.xn`` -> ``job.xn``)
 
         * For remote kommandir's, rsync workspace back to exekutir's
-          copy. (run_after_job.yml)
+          copy. (``run_after_job.yml``)
 
     * Exekutir releases shared lock
 
@@ -80,12 +80,12 @@ FIXME: rough-draft
    not setup or run happened or completed successfully.  Must be
    very tolerant of missing files and unexpected state.
 
-    * Exekutir acquires exclusive lock (cleanup_before_job.yml)
+    * Exekutir acquires exclusive lock (``cleanup_before_job.yml``)
 
         * Create or discover the kommandir VM by running a script.  YAML
           output from script updates kommandir's variables.
 
-        * Wait for Kommandir to ping, and test ability to run "sleep 0.1".
+        * Wait for Kommandir to ping, and test ability to run ``sleep 0.1``.
 
         * Complete kommandir VM setup (if needed), install packages, 
           setup storage, etc.
@@ -98,7 +98,7 @@ FIXME: rough-draft
           copy of kommandir's workspace to kommandir.  Failure
           blocks next step. 
 
-        * Remotely run job.xn on kommandir.  Presumed this will
+        * Remotely run ``job.xn`` on kommandir.  Presumed this will
           destroy all peons and release any other resources
           (extra storage volumes, networking, etc.).  Failure
           does NOT block next step. (exekutir.xn -> job.xn)
@@ -123,4 +123,4 @@ FIXME: rough-draft
 
     * Exekutir prunes it's copy of Kommandir's workspace, then it's own.
       Removes cache, symlinks, copy of exekutir roles, exekutir playbooks,
-      and exekutir variables.yml (preserving kommandir's copy).
+      and exekutir ``variables.yml`` (preserving kommandir's copy).
