@@ -1,5 +1,10 @@
 ---
 
+# Some Exekutir variable values are referenced by kommandir
+- hosts: exekutir
+  roles:
+    - common
+
 - hosts: kommandir
   force_handlers: True
   roles:
