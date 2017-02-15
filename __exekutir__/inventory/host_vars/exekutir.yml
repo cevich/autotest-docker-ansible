@@ -45,7 +45,7 @@ kommandir_workspace: '{{ workspace }}/kommandir_workspace'
 kommandir_workspace_dirty: True
 
 # Path where job's kommandir.xn, inventory, and variables are found.
-job_path: "{{ lookup('env','ADEPT_PATH') }}/jobs/full"
+job_path: "{{ lookup('env','ADEPT_PATH') }}/__jobs__/full"
 
 job_name: "{{ job_path | basename }}"
 
