@@ -11,6 +11,7 @@
    topology
    definitions
    hacking
+   variables
 
 .. include:: README.rst
    :end-before: The quickstart section begins next
@@ -23,6 +24,9 @@
 .. include:: overview.rst
 
 .. include:: hacking.rst
+
+.. include:: variables.rst
+
 
 Additional Documentation
 =========================
