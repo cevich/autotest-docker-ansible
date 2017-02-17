@@ -276,20 +276,26 @@ class OpenstackREST(object):
 
         :param name: Optional, name of server to retrieve IP from
         :param uuid: Optional, ID of server to retrieve IP from
-        :returns: True if server delete request successful
+        :returns: any exception that was raised, or None
         """
+        self.raise_if(not name and not uuid,
+                      ValueError,
+                      "Must provide either name or uuid")
+        if not uuid:
+            try:
+                server_details = self.server(name=name)
+            except IndexError, xcept:
+                return xcept # Server doesn't exist
+            uuid = server_details['id']
+
         try:
-            server_details = self.server(name=name, uuid=uuid)
-        except IndexError:
-            return True # Server doesn't exist
-        try:
-            self.compute_request('/servers/%s' % server_details['id'],
-                                 method='delete')
-            return True
+            self.compute_request('/servers/%s' % uuid, method='delete')
+            return None  # Good result
         # This can fail for any number of reasons, can't list them all
-        # pylint: disable=W0702
-        except:
-            return False
+        # pylint: disable=W0703
+        except Exception, xcept:
+            return xcept
+
 
     def floating_ip(self):
         """
@@ -303,7 +309,7 @@ class OpenstackREST(object):
         except (KeyError, IndexError):
             return None
 
-class TimeoutAction(object):  # pylint: disable=R0903
+class TimeoutAction(object):
     """
     ABC callable, raises an exception on timeout, or returns non-None value of done()
     """
@@ -353,6 +359,7 @@ class TimeoutDeleted(TimeoutAction):
     """Helper class to ensure server is deleted within timeout window"""
 
     timeout = 60
+    delete_result = None
 
     def __init__(self, name):
         super(TimeoutDeleted, self).__init__(name)
@@ -439,6 +446,9 @@ class TimeoutCreate(TimeoutAction):
         logging.info("     %s: %s, power %s", name, vm_state, power_state)
         if power_state == 'RUNNING' and vm_state == 'active':
             return self.server_id
+        elif power_state == 'UNKNOWN':
+            raise RuntimeError("Got unknown power-state '%s' from response JSON",
+                               % server_details['OS-EXT-STS:power_state'])
         else:
             return None
 
@@ -478,6 +488,7 @@ class TimeoutAssignFloatingIP(TimeoutAction):
 
         logging.info("Attempting to assign floating IP %s to server id %s",
                      floating_ip, server_id)
+        # Addresses TOCTOU: Another server grabs floating_ip before we do
         try:
             addfloatingip = dict(address=floating_ip)
             self.os_rest.compute_request('/servers/%s/action' % server_id,
@@ -488,7 +499,6 @@ class TimeoutAssignFloatingIP(TimeoutAction):
         except (ValueError, KeyError, IndexError):
             logging.info("Assignment failed, retrying")
             return None
-
 
 
 def create(name, pub_key_files):
@@ -678,6 +688,7 @@ def api_debug_dump():
     import simplejson
     with open(filepath, 'wb') as debugf:
         simplejson.dump(lines, debugf, indent=2, sort_keys=True)
+
 
 if __name__ == '__main__':
     LOGGER = logging.getLogger()

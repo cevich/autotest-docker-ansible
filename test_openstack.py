@@ -289,7 +289,7 @@ class TestDiscoverCreateDestroyBase(TestCaseBase):
 
     def fake_time(self, sleep=1):
         """Return fake_time_value after incrementing it by 1"""
-        self.fake_time_value += sleep
+        self.fake_time_value += int(sleep)
         return self.fake_time_value
 
     def certify_stdout(self, name, ip_address):
@@ -359,7 +359,7 @@ class TestDiscoverCreate(TestDiscoverCreateDestroyBase):
         self.patched = patch('%s.open' % self.UUT, self.mock_open, create=True)
 
     def test_missing(self):
-        """Verify discover fails, but creation works with available floating ip"""
+        """Verify new creation works with available floating ip"""
         with self.patched:
             self.uut.create('foobar', ['list', 'of', 'ssh', 'keys'])
         self.certify_stdout('foobar', '5.4.3.2')
@@ -367,14 +367,14 @@ class TestDiscoverCreate(TestDiscoverCreateDestroyBase):
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
     def test_floating(self):
-        """Verify discover fails, but creation works, including creating floating ip"""
+        """Verify new creation works including new floating ip"""
         with self.patched:
             self.uut.create('foobar', ['list', 'of', 'ssh', 'keys'])
         self.certify_stdout('foobar', '192.168.1.2')
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
     def test_partial(self):
-        """Verify partially created VM is removed and re-created"""
+        """Verify partially created VM (no floating ip) is removed and re-created"""
         with self.patched:
             self.uut.create('foobar', ['list', 'of', 'ssh', 'keys'])
         self.certify_stdout('foobar', '6.5.4.3')
