@@ -87,6 +87,4 @@ git_cache_args:
     - repo: "https://github.com/python-bugzilla/python-bugzilla.git"
       recursive: False
       cachepath: "python-bugzilla"
-      # Do not include a 'depth' argument, git needs the full history to be 
-      # able to locate specific commits/branches/tags referenced by 'version'
       version: "v1.2.2"
