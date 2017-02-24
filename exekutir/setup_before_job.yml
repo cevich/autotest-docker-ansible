@@ -34,7 +34,10 @@
         - kommandir
         - exekutir
     - kommandir_up
-    - kommandir_installed
+    - role: kommandir_installed
+      when: "'nocloud' not in group_names"
+    - role: kommandir_setup
+      when: "'nocloud' not in group_names"
     - role: exekutir_lock
       lock_type: "shared"
       lock_release: False

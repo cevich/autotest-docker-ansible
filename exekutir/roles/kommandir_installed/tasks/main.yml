@@ -8,6 +8,8 @@
     that:
         - 'inventory_hostname == "kommandir"'
         - 'not job_xn_done'
+        # Only makes sense when kommandir != exekutir
+        - "'nocloud' not in group_names"
 
 - name: WARNING
   debug:
@@ -18,8 +20,6 @@
 - name: Repository rpms are installed with yum command
   command: "yum install -y {{ item }}"
   with_items: "{{ repo_rpms | default([]) }}"
-  # Only makes sense when kommandir != exekutir
-  when: "'nocloud' not in group_names"
   # Avoid running into task timeouts.
   async: 120
   poll: 5
@@ -30,8 +30,6 @@
     state: latest
     disablerepo: '{{ disable_repos | join(",") }}'
     enablerepo: '{{ enable_repos | join(",") }}'
-  # Only makes sense when kommandir != exekutir
-  when: "'nocloud' not in group_names"
   # This will probably take longer
   async: "{{ 30 * 60 }}"
   poll: 30
