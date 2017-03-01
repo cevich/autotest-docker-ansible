@@ -29,25 +29,27 @@
     password: '{{ kommandir_openstack.password }}'
 
 - name: ADEPT kommandir VM exists
-  nova_compute:
-    auth_url: "{{ kommandir_openstack.auth_url }}"
-    login_username: "{{ kommandir_openstack.username }}"
-    login_password: "{{ kommandir_openstack.password }}"
-    login_tenant_name: "{{ kommandir_openstack.tenant_name }}"
-    flavor_id: "3"
-    image_name: '{{ kommandir_openstack.image }}'
-    name: '{{ kmndrname | quote }}'
+  os_server:
     state: present
-    user_data: |
-        {{ "#cloud-config" }}
-        {{ kommandir_openstack.userdata | to_nice_yaml }}
+    auth:
+      auth_url: '{{ kommandir_openstack.auth_url }}'
+      username: '{{ kommandir_openstack.username }}'
+      password: '{{ kommandir_openstack.password }}'
+      project_name: '{{ kommandir_openstack.tenant_name }}'
+    flavor: 3
+    image: '{{ kommandir_openstack.image }}'
+    name: '{{ kmndrname | quote }}'
     floating_ip_pools: '{{ kommandir_openstack.legacy_floating_ip_pool | list }}'
-    wait: "yes"
+    timeout: 30
+    wait: yes
+    user_data: |
+      '{{ "#cloud-config" }}'
+      '{{ kommandir_openstack.userdata | to_nice_yaml }}'
   register: nc
 
 - name: ADEPT kommandir's public IP list is extracted from variable
   set_fact:
-    _kmndrip: '{{ nc.public_ip }}'
+    _kmndrip: '{{ nc.server.interface_ip }}'
 
 - name: the kmndrip variable is set from first item in list
   set_fact:
@@ -69,7 +71,7 @@
 # use command-line client "the hard way" to ensure state is idempotent
 
 - name: Kommandir's workspace storage volume state is known
-  shell: "{{ workspace }}/openrc.sh /usr/bin/nova volume-show {{ kmndrname | quote }}"
+  shell: "{{ workspace }}/openrc.sh /usr/bin/cinder show {{ kmndrname | quote }}"
   register: pre_nvc
   ignore_errors: True
 
@@ -84,7 +86,7 @@
   when: _vol_create is undefined
 
 - name: Kommandir's workspace storage volume is created
-  shell: "{{ workspace }}/openrc.sh /usr/bin/nova volume-create --display-name {{ kmndrname | quote }} 10"
+  shell: "{{ workspace }}/openrc.sh /usr/bin/cinder create --name {{ kmndrname | quote }} 10"
   register: nvc
   when: _vol_create
 
@@ -93,15 +95,15 @@
   when: _vol_create and nvc | failed
 
 - name: Wait for Kommandir's workspace storage volume availability
-  shell: "{{ workspace }}/openrc.sh /usr/bin/nova volume-show {{ kmndrname | quote }}"
+  shell: "{{ workspace }}/openrc.sh /usr/bin/cinder show {{ kmndrname | quote }}"
   register: nvs
   until: nvs.stdout | search("status.+available") or
          nvs.stdout | search("status.+in-use")
-  retries: 180
+  retries: 90
   delay: 1
 
 - name: Kommandir's workspace storage volume state is known
-  shell: "{{ workspace }}/openrc.sh /usr/bin/nova volume-show {{ kmndrname | quote }}"
+  shell: "{{ workspace }}/openrc.sh /usr/bin/cinder show {{ kmndrname | quote }}"
   register: post_nvc
   ignore_errors: True
 
@@ -137,10 +139,10 @@
   when: _vol_attach
 
 - name: Wait for Kommandir's workspace storage volume attachment
-  shell: "{{ workspace }}/openrc.sh /usr/bin/nova volume-show {{ _vol_id }}"
+  shell: "{{ workspace }}/openrc.sh /usr/bin/cinder show {{ _vol_id }}"
   register: nvs
   until: nvs.stdout | search("attachments.*server_id")
-  retries: 180
+  retries: 30
   delay: 1
 
 - fail:
