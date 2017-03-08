@@ -1,0 +1,19 @@
+[
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+          "name": "deleteme"
+        },
+        {
+          "id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+          "name": "deleteme"
+        }
+      ]
+    },
+    "sequence_number": 5,
+    "status_code": 200
+  }
+]

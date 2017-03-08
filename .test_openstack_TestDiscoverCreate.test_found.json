@@ -13,6 +13,19 @@
     "status_code": 200
   },
   {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 5,
+    "status_code": 200
+  },
+  {
     "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
     "response": {
       "server": {

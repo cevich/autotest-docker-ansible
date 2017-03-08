@@ -13,9 +13,9 @@ Dependencies:
 """
 
 import sys
-import simplejson
 from urlparse import urlparse
 from urlparse import urlunparse
+import simplejson
 import unittest2 as unittest
 import test_adept
 # ref: http://www.voidspace.org.uk/python/mock/index.html
@@ -23,11 +23,54 @@ from mock import Mock
 from mock import mock_open
 from mock import patch
 
+
 # For test discovery all test modules must be importable from the top level
 # directory of the project.  No clean way to do this that doesn't depend on
 # knowledge of the repo directory structure somewhere/somehow.
 UUT_REL_PATH = 'kommandir/bin/'
 sys.path.insert(0, UUT_REL_PATH)
+
+
+# There's no other way to append E0012 so older pylint
+# ignores the E0704 (only in newer pylint). Monkey-patch
+# is needed to disable E0704.  E0704 disabled to allow
+# re-raising exception after additional API debugging details.
+test_adept.TestPylint.DISABLE += ",E0012,E0704"
+
+# pylint can't count properly when *args, **dargs are in use.
+# Disable here, otherwise need to do it on every subclass.
+test_adept.TestPylint.DISABLE += ",W0221"
+
+# Especially during delete/remove operations, need to catch
+# general exceptions, then deal with them appropriatly.
+test_adept.TestPylint.DISABLE += ",W0703"
+
+# pylint doesn't count __init__ as a public method for ABCs
+test_adept.TestPylint.DISABLE += ",R0903"
+
+class TestCaseBase(test_adept.TestCaseBase):
+    """Reuses essental/basic unittest plumbing from adepts unittests"""
+
+    UUT = 'adept_openstack'
+
+    def setUp(self):
+        super(TestCaseBase, self).setUp()
+        self.uut = __import__(self.UUT)
+
+
+class TestPylint(test_adept.TestPylint):
+    """Reuses essental pyline-plumbing from adepts unittests, for this module"""
+
+    UUT = TestCaseBase.UUT
+
+    def test_unittest_pylint(self):
+        "Run pylint on the unittest module itself"
+        self._pylintrun(__file__)
+
+    def test_uut_pylint(self):
+        "Run pylint on the unit under test"
+        self._pylintrun(self.uut.__file__)
+
 
 # For internal unittest use, don't care about too-few-public methods
 # pylint: disable=R0903
@@ -93,9 +136,8 @@ class FakeSession(object):
             seq_no = None
         else:
             seq_no = self.found_mocks[-1].sequence_number
-        msg = ("No response found for %s request of %s"
-               " Previous entry sequence number %s"
-               % (method, uri, seq_no))
+        msg = ("No response found for %s request of %s in %s after sequence number %s"
+               % (method, uri, self.resp_filename, seq_no))
         raise KeyError(msg)
 
     get = lambda self, uri: self.find_mock('GET', uri)
@@ -120,49 +162,38 @@ class FakeServiceSessions(object):
         return True
 
 
-class TestCaseBase(test_adept.TestCaseBase):
-    """Reuses essental/basic unittest plumbing from adepts unittests"""
-
-    UUT = 'adept_openstack'
-
-    def setUp(self):
-        super(TestCaseBase, self).setUp()
-        self.uut = __import__(self.UUT)
-
-
-class TestPylint(test_adept.TestPylint):
-    """Reuses essental pyline-plumbing from adepts unittests, for this module"""
-
-    UUT = TestCaseBase.UUT
-
-    DISABLE = test_adept.TestPylint.DISABLE + ',W0221,R0903'
-
-    def test_unittest_pylint(self):
-        "Run pylint on the unittest module itself"
-        self._pylintrun(__file__)
-
-    def test_uut_pylint(self):
-        "Run pylint on the unit under test"
-        self._pylintrun(self.uut.__file__)
-
-
 class TestParsedArgs(TestCaseBase):
     """Tests of parse_args function"""
 
+    def setUp(self):
+        super(TestParsedArgs, self).setUp()
+        self.uut.ENABLE_HELP = False
+        self.exit = Mock()
+        self.error = Mock()
+        self.create_patch('%s.argparse.ArgumentParser.exit' % self.UUT, self.exit)
+        self.create_patch('%s.argparse.ArgumentParser.error' % self.UUT, self.error)
+
+
     def test_operations(self):
-        """Check expected arguments come from parsed_args"""
-        op_argv = dict(destroy=['self', 'foo',],
-                       create=['self', 'foo', 'bar', 'baz'],
-                       discover=['self', 'baz', 'baz', 'bar'])
-        op_expected = dict(destroy=dict(name=op_argv['destroy'][1]),
-                           create=dict(name=op_argv['create'][1],
-                                       pub_key_files=set(op_argv['create'][2:])),
-                           discover=dict(name=op_argv['discover'][1],
-                                         pub_key_files=set(op_argv['discover'][2:])))
-        for opr in ('destroy', 'create', 'discover'):
-            parsed_args = self.uut.parse_args(op_argv[opr], opr)
-            with self.subTest(expected=op_expected[opr], parsed_args=parsed_args):
-                self.assertDictContainsSubset(op_expected[opr], parsed_args)
+        """Check expected minimum arguments parse in predictable way"""
+        # input
+        op_argv = dict(destroy=['binary', 'foo',],
+                       create=['binary', 'foo', 'bar', 'baz'],
+                       discover=['binary', 'baz', 'baz', 'bar'])
+
+        # output
+        destroy = dict(name='foo')
+        create = dict(name='foo', image='CentOS-Cloud-7',
+                      flavor='m1.medium', private=False)
+        discover = dict(name='baz', image='CentOS-Cloud-7',
+                        flavor='m1.medium', private=False)
+        op_expected = dict(destroy=destroy, create=create, discover=discover)
+
+        for operation in ('destroy', 'create', 'discover'):
+            parsed_args = self.uut.parse_args(op_argv[operation], operation)
+            with self.subTest(operation=operation, expected=op_expected[operation],
+                              parsed_args=parsed_args):
+                self.assertDictContainsSubset(op_expected[operation], parsed_args)
 
 
 class TestMain(TestCaseBase):
@@ -170,6 +201,7 @@ class TestMain(TestCaseBase):
 
     def setUp(self):
         super(TestMain, self).setUp()
+        self.exit = Mock()
         self.discover = Mock(spec=self.uut.discover)
         self.create = Mock(spec=self.uut.create)
         self.destroy = Mock(spec=self.uut.destroy)
@@ -178,6 +210,7 @@ class TestMain(TestCaseBase):
         self.create_patch('%s.create' % self.UUT, self.create)
         self.create_patch('%s.destroy' % self.UUT, self.destroy)
         self.create_patch('%s.sys.stderr' % self.UUT, None)
+        self.create_patch('%s.sys.exit' % self.UUT, self.exit)
 
     def test_discover(self):
         """Test main calls discover function"""
@@ -198,12 +231,25 @@ class TestMain(TestCaseBase):
         self.assertRegex(' '.join(context.output),
                          r'.*existing.*%s' % 'foobar')
         self.assertFalse(self.destroy.called)
-        self.assertTrue(self.discover.called)
         self.assertTrue(self.create.called)
+
+    def test_create_exclusive(self):
+        """Test main does not create when discover successful"""
+        with self.assertLogs(level='ERROR') as context:
+            # discover will NOT raise, main should exit
+            self.uut.main([self.uut.ONLY_CREATE_NAME,
+                           'snafu', 'foobar'],
+                          self.service_sessions)
+        self.assertRegex(' '.join(context.output),
+                         r'.*existing.*%s' % 'snafu')
+        self.assertFalse(self.destroy.called)
+        self.assertTrue(self.discover.called)
+        self.assertFalse(self.create.called)
+        self.assertTrue(self.exit.called)
 
     def test_destroy(self):
         """Test main calls destroy function"""
-        self.uut.main([self.uut.DESTROY_NAME, 'snafu', 'foobar'],
+        self.uut.main([self.uut.DESTROY_NAME, 'snafu'],
                       self.service_sessions)
         self.assertFalse(self.create.called)
         self.assertFalse(self.discover.called)
@@ -289,7 +335,8 @@ class TestDiscoverCreateDestroyBase(TestCaseBase):
 
     def fake_time(self, sleep=1):
         """Return fake_time_value after incrementing it by 1"""
-        self.fake_time_value += int(sleep)
+        # Minimum increment is one prevents infinite loop
+        self.fake_time_value += max(int(sleep), 1)
         return self.fake_time_value
 
     def certify_stdout(self, name, ip_address):
@@ -357,27 +404,22 @@ class TestDiscoverCreate(TestDiscoverCreateDestroyBase):
         super(TestDiscoverCreate, self).setUp()
         self.mock_open = mock_open(read_data='bibble babble')
         self.patched = patch('%s.open' % self.UUT, self.mock_open, create=True)
+        self.create_args = ('foobar', ['list', 'of', 'ssh', 'keys'],
+                            'image_name', 'flavor_name')
 
     def test_missing(self):
         """Verify new creation works with available floating ip"""
         with self.patched:
-            self.uut.create('foobar', ['list', 'of', 'ssh', 'keys'])
-        self.certify_stdout('foobar', '5.4.3.2')
+            self.uut.create(*self.create_args)
+        self.certify_stdout('foobar', '4.5.6.7')
         # Verify all requests were consumed; requests == replies
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
     def test_floating(self):
         """Verify new creation works including new floating ip"""
         with self.patched:
-            self.uut.create('foobar', ['list', 'of', 'ssh', 'keys'])
-        self.certify_stdout('foobar', '192.168.1.2')
-        self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
-
-    def test_partial(self):
-        """Verify partially created VM (no floating ip) is removed and re-created"""
-        with self.patched:
-            self.uut.create('foobar', ['list', 'of', 'ssh', 'keys'])
-        self.certify_stdout('foobar', '6.5.4.3')
+            self.uut.create(*self.create_args)
+        self.certify_stdout('foobar', '4.5.6.7')
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
     def test_found(self):
@@ -385,6 +427,22 @@ class TestDiscoverCreate(TestDiscoverCreateDestroyBase):
         with self.patched:
             self.uut.discover('foobar')
         self.certify_stdout('foobar', '6.7.8.9')
+        self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
+
+    def test_privsize(self):
+        """Verify creation of private VM with volume"""
+        with self.patched:
+            self.uut.create(*self.create_args,
+                            private=True, router_name='network_name', size=11000000000)
+        self.certify_stdout('foobar', '5.4.3.2')
+        self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
+
+    def test_clash(self):
+        """Verify two VMs with same name result in exception"""
+        with self.patched:
+            self.assertRaisesRegex(RuntimeError,
+                                   'More than one server',
+                                   self.uut.discover, 'foobar')
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
 
@@ -401,7 +459,7 @@ class TestDestroy(TestDiscoverCreateDestroyBase):
 
     def test_found(self):
         """Verify destroy behavior when VM name found"""
-        self.uut.destroy('rhel')
+        self.uut.destroy('deleteme')
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
     def test_other(self):
@@ -409,6 +467,12 @@ class TestDestroy(TestDiscoverCreateDestroyBase):
         self.uut.destroy('does_not_exist')
         self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
+    def test_clash(self):
+        """Verify destroy when two VMs have same name result in exception"""
+        self.assertRaisesRegex(RuntimeError,
+                               'More than one server',
+                               self.uut.destroy, 'deleteme')
+        self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
 
 if __name__ == '__main__':
     unittest.main(failfast=True, catchbreak=True, verbosity=2)

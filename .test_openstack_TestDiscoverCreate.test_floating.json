@@ -1,238 +1,102 @@
 [
   {
-    "GET": "http://1.2.3.4/servers",
-    "response": {
-      "servers": [
-      ]
-    },
-    "sequence_number": 0,
-    "status_code": 200
-  },
-  {
-    "GET": "http://1.2.3.4/servers",
-    "response": {
-      "servers": [
-      ]
-    },
-    "sequence_number": 10,
-    "status_code": 200
-  },
-  {
     "GET": "http://1.2.3.4/flavors",
     "response": {
       "flavors": [
         {
           "id": "3",
-          "links": [
-            {
-              "href": "http://1.2.3.4/flavors/3",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/something/flavors/3",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "m1.medium"
+          "name": "flavor_name"
         }
       ]
     },
-    "sequence_number": 30,
+    "sequence_number": 20,
     "status_code": 200
   },
   {
-    "GET": "http://1.2.3.4/v2/images?name=CentOS-Cloud-7&status=active",
+    "GET": "http://1.2.3.4/v2/images?name=image_name&status=active",
     "response": {
-      "first": "/v2/images?status=active&name=CentOS-Cloud-7",
+      "first": "/v2/images?status=active&name=image_name",
       "images": [
         {
-          "architecture": "x86_64",
-          "checksum": "c2ebde45f03aa35c6d996c3de984a9d6",
-          "container_format": "bare",
-          "created_at": "2017-01-04T17:13:31Z",
-          "description": "https://wiki.centos.org/Download",
-          "disk_format": "qcow2",
-          "file": "/v2/images/the_image_id/file",
           "id": "the_image_id",
-          "min_disk": 0,
-          "min_ram": 0,
-          "name": "CentOS-Cloud-7",
-          "owner": "something",
-          "protected": true,
-          "schema": "/v2/schemas/image",
-          "self": "/v2/images/the_image_id",
-          "size": 898236416,
-          "status": "active",
-          "tags": [],
-          "updated_at": "2017-01-04T17:14:55Z",
-          "virtual_size": null,
-          "visibility": "private"
+          "name": "image_name",
+          "status": "active"
         }
       ],
       "schema": "/v2/schemas/images"
     },
-    "sequence_number": 40,
+    "sequence_number": 30,
     "status_code": 200
   },
   {
     "POST": "http://1.2.3.4/servers",
     "response": {
       "server": {
-        "OS-DCF:diskConfig": "MANUAL",
-        "adminPass": "supersecret",
-        "id": "foobars_id",
-        "links": [
-          {
-            "href": "http://1.2.3.4/servers/foobars_id",
-            "rel": "self"
-          },
-          {
-            "href": "http://1.2.3.4/something/servers/foobars_id",
-            "rel": "bookmark"
-          }
-        ],
-        "security_groups": [
-          {
-            "name": "default"
-          }
-        ]
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08"
       }
     },
-    "sequence_number": 50,
+    "sequence_number": 40,
     "status_code": 202
   },
   {
-    "GET": "http://1.2.3.4/servers/foobars_id",
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
       "server": {
-        "OS-DCF:diskConfig": "MANUAL",
-        "OS-EXT-AZ:availability_zone": "nova",
         "OS-EXT-STS:power_state": 0,
-        "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "building",
-        "OS-SRV-USG:launched_at": null,
-        "OS-SRV-USG:terminated_at": null,
-        "accessIPv4": "",
-        "accessIPv6": "",
-        "addresses": {},
-        "config_drive": "",
-        "created": "2017-03-07T18:27:07Z",
-        "flavor": {
-          "id": "3",
-          "links": [
-            {
-              "href": "http://1.2.3.4/something/flavors/3",
-              "rel": "bookmark"
-            }
-          ]
+        "addresses": {
+          "network_name": []
         },
-        "hostId": "big_number",
-        "id": "foobars_id",
-        "image": {
-          "id": "the_image_id",
-          "links": [
-            {
-              "href": "http://1.2.3.4/something/images/the_image_id",
-              "rel": "bookmark"
-            }
-          ]
-        },
-        "key_name": null,
-        "links": [
-          {
-            "href": "http://1.2.3.4/servers/foobars_id",
-            "rel": "self"
-          },
-          {
-            "href": "http://1.2.3.4/something/servers/foobars_id",
-            "rel": "bookmark"
-          }
-        ],
-        "metadata": {},
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
         "name": "foobar",
         "os-extended-volumes:volumes_attached": [],
-        "progress": 0,
-        "status": "BUILD",
-        "tenant_id": "something",
-        "updated": "2017-03-07T18:27:08Z",
-        "user_id": "the_user_id"
+        "status": "something"
       }
     },
-    "sequence_number": 70,
+    "sequence_number": 50,
     "status_code": 200
   },
   {
-    "GET": "http://1.2.3.4/servers/foobars_id",
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
       "server": {
-        "OS-DCF:diskConfig": "MANUAL",
-        "OS-EXT-AZ:availability_zone": "nova",
         "OS-EXT-STS:power_state": 1,
-        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "frobnicating",
+        "addresses": {
+          "network_name": []
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "something"
+      }
+    },
+    "sequence_number": 60,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:vm_state": "active",
-        "OS-SRV-USG:launched_at": "2017-03-07T18:27:18.000000",
-        "OS-SRV-USG:terminated_at": null,
-        "accessIPv4": "",
-        "accessIPv6": "",
         "addresses": {
           "network_name": [
             {
-              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:51:4e:98",
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
               "OS-EXT-IPS:type": "fixed",
               "addr": "5.4.3.2",
               "version": 4
             }
           ]
         },
-        "config_drive": "",
-        "created": "2017-03-07T18:27:07Z",
-        "flavor": {
-          "id": "3",
-          "links": [
-            {
-              "href": "http://1.2.3.4/something/flavors/3",
-              "rel": "bookmark"
-            }
-          ]
-        },
-        "hostId": "big_number",
-        "id": "foobars_id",
-        "image": {
-          "id": "the_image_id",
-          "links": [
-            {
-              "href": "http://1.2.3.4/something/images/the_image_id",
-              "rel": "bookmark"
-            }
-          ]
-        },
-        "key_name": null,
-        "links": [
-          {
-            "href": "http://1.2.3.4/servers/foobars_id",
-            "rel": "self"
-          },
-          {
-            "href": "http://1.2.3.4/something/servers/foobars_id",
-            "rel": "bookmark"
-          }
-        ],
-        "metadata": {},
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
         "name": "foobar",
         "os-extended-volumes:volumes_attached": [],
-        "progress": 0,
-        "security_groups": [
-          {
-            "name": "default"
-          }
-        ],
-        "status": "ACTIVE",
-        "tenant_id": "something",
-        "updated": "2017-03-07T18:27:18Z",
-        "user_id": "the_user_id"
+        "status": "ACTIVE"
       }
     },
-    "sequence_number": 130,
+    "sequence_number": 60,
     "status_code": 200
   },
   {
@@ -259,7 +123,32 @@
         }
       ]
     },
-    "sequence_number": 140,
+    "sequence_number": 70,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "5.4.3.2",
+              "version": 4
+            }
+          ]
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "ACTIVE"
+      }
+    },
+    "sequence_number": 74,
     "status_code": 200
   },
   {
@@ -278,107 +167,159 @@
         }
       ]
     },
-    "sequence_number": 150,
+    "sequence_number": 80,
     "status_code": 200
   },
   {
     "POST": "http://1.2.3.4/v2.0/floatingips",
     "response": {
-      "floatingip": {
-        "fixed_ip_address": null,
-        "floating_ip_address": "192.168.1.2",
-        "floating_network_id": "the_network_id",
-        "id": "44608161-678a-49cf-b1d5-fc4535910fbf",
-        "port_id": null,
-        "router_id": null,
-        "status": "DOWN",
-        "tenant_id": "something"
-      }
+        "floatingip": {
+            "floating_ip_address": "4.5.6.7"
+        }
     },
-    "sequence_number": 160,
-    "status_code": 201
+    "sequence_number": 90,
+    "status_code": 202
   },
   {
-    "POST": "http://1.2.3.4/servers/foobars_id/action"
+    "POST": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08/action",
+    "sequence_number": 100,
+    "status_code": 202
   },
   {
-    "GET": "http://1.2.3.4/servers/foobars_id",
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
       "server": {
-        "OS-DCF:diskConfig": "MANUAL",
-        "OS-EXT-AZ:availability_zone": "nova",
         "OS-EXT-STS:power_state": 1,
-        "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
-        "OS-SRV-USG:launched_at": "2017-03-07T18:27:18.000000",
-        "OS-SRV-USG:terminated_at": null,
-        "accessIPv4": "",
-        "accessIPv6": "",
         "addresses": {
           "network_name": [
             {
-              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:51:4e:98",
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "5.4.3.2",
+              "version": 4
+            }
+          ]
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "ACTIVE"
+      }
+    },
+    "sequence_number": 106,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/v2.0/floatingips",
+    "response": {
+      "floatingips": [
+        {
+          "fixed_ip_address": "3.4.5.6",
+          "floating_ip_address": "192.168.1.1",
+          "floating_network_id": "the_network_id",
+          "id": "floating_id",
+          "port_id": "the_port_id",
+          "router_id": "some_number",
+          "status": "ACTIVE",
+          "tenant_id": "something"
+        },
+        {
+          "fixed_ip_address": null,
+          "floating_ip_address": "4.5.6.7",
+          "floating_network_id": "the_network_id",
+          "id": "another_floating_id",
+          "port_id": null,
+          "router_id": null,
+          "status": "DOWN"
+        }
+      ]
+    },
+    "sequence_number": 110,
+    "status_code": 200
+  },
+  {
+    "POST": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08/action",
+    "sequence_number": 120,
+    "status_code": 202
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
               "OS-EXT-IPS:type": "fixed",
               "addr": "5.4.3.2",
               "version": 4
             },
             {
-              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:51:4e:98",
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:77",
               "OS-EXT-IPS:type": "floating",
-              "addr": "192.168.1.2",
+              "addr": "4.5.6.7",
               "version": 4
             }
           ]
         },
-        "config_drive": "",
-        "created": "2017-03-07T18:27:07Z",
-        "flavor": {
-          "id": "3",
-          "links": [
-            {
-              "href": "http://1.2.3.4/something/flavors/3",
-              "rel": "bookmark"
-            }
-          ]
-        },
-        "hostId": "big_number",
-        "id": "foobars_id",
-        "image": {
-          "id": "the_image_id",
-          "links": [
-            {
-              "href": "http://1.2.3.4/something/images/the_image_id",
-              "rel": "bookmark"
-            }
-          ]
-        },
-        "key_name": null,
-        "links": [
-          {
-            "href": "http://1.2.3.4/servers/foobars_id",
-            "rel": "self"
-          },
-          {
-            "href": "http://1.2.3.4/something/servers/foobars_id",
-            "rel": "bookmark"
-          }
-        ],
-        "metadata": {},
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
         "name": "foobar",
         "os-extended-volumes:volumes_attached": [],
-        "progress": 0,
-        "security_groups": [
-          {
-            "name": "default"
-          }
-        ],
-        "status": "ACTIVE",
-        "tenant_id": "something",
-        "updated": "2017-03-07T18:27:18Z",
-        "user_id": "the_user_id"
+        "status": "ACTIVE"
       }
     },
-    "sequence_number": 170,
+    "sequence_number": 116,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+          "name": "foobar"
+        },
+        {
+          "id": "547996c1db08",
+          "name": "anotherone"
+        }
+      ]
+    },
+    "sequence_number": 118,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "5.4.3.2",
+              "version": 4
+            },
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:77",
+              "OS-EXT-IPS:type": "floating",
+              "addr": "4.5.6.7",
+              "version": 4
+            }
+          ]
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "ACTIVE"
+      }
+    },
+    "sequence_number": 120,
     "status_code": 200
   }
 ]

@@ -11,7 +11,7 @@ run of Docker Autotest over one or more local or cloud-based systems.
 Prerequisites
 ==============
 
-*  Red Hat based host (RHEL_, Atomic_, CentOS_, Fedora_, etc), subscribed and fully updated.
+*  Red Hat based host (RHEL_, CentOS_, Fedora_, etc), subscribed and fully updated.
 *  Python 2.7
 *  PyYAML 3.10
 *  Ansible_ 2.1 or later
@@ -26,7 +26,6 @@ Openstack support:
 
 .. _Ansible: http://docs.ansible.com/index.html
 .. _RHEL: http://www.redhat.com/rhel
-.. _Atomic: http://www.redhat.com/en/resources/red-hat-enterprise-linux-atomic-host
 .. _CentOS: http://www.centos.org
 .. _Fedora: http://www.fedoraproject.org
 .. _`Openstack client config credentials`: https://docs.openstack.org/developer/os-client-config/

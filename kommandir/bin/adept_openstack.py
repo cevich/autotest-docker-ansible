@@ -7,12 +7,12 @@ Assumed to be running under an exclusive lock to prevent TOCTOU race
 and/or clashes with existing named VMs.
 
 Requires:
-*  RHEL/CentOS/Fedora host w/ RPMs:
-    * redhat-rpm-config (base)
-    * python-virtualenv or python2-virtualenv (EPEL)
+*  RHEL/CentOS host w/ RPMs:
+    * Python 2.7+
+    * redhat-rpm-config (base repo)
+    * python-virtualenv or python2-virtualenv (EPEL repo)
 * Openstack credentials as per:
     https://docs.openstack.org/developer/os-client-config/
-* Execution under adept.py exekutir.xn transition file or unittests
 """
 
 import sys
@@ -21,7 +21,26 @@ import os.path
 import logging
 import subprocess
 import time
+import argparse
 from base64 import b64encode
+
+# Operation is discovered by symlink name used to execute script
+ONLY_CREATE_NAME = 'openstack_exclusive_create.py'
+DISCOVER_CREATE_NAME = 'openstack_discover_create.py'
+DESTROY_NAME = 'openstack_destroy.py'
+ALLOWED_NAMES = (DISCOVER_CREATE_NAME, DESTROY_NAME, ONLY_CREATE_NAME)
+
+DESCRIPTION = ('Low dependency script called by ADEPT playbooks'
+               ' to manage OpenStack VMs.')
+
+EPILOG = ('Required:  The WORKSPACE environment variable must exist and point to a'
+          ' writeable directory.  The script must be invoked by link (or symlink)'
+          ' named "%s" or "%s". Alternatively, if named "%s", VM creation will'
+          ' fail, should another with the same name already exist.'
+          % ALLOWED_NAMES)
+
+# Needed for unitesting so argparse doesn't call system.exit()
+ENABLE_HELP = True
 
 # Placeholder, will be set by unittests or under if __name__ == '__main__'
 os_client_config = ValueError  # pylint: disable=C0103
@@ -46,21 +65,19 @@ PIP_ONLY_BINARY = [':all:']
 # These must be compiled, but don't require C/C++
 PIP_NO_BINARY = ['wrapt', 'PyYAML', 'positional']
 
-IMAGE = 'CentOS-Cloud-7'
-FLAVOR = 'm1.medium'
-
 # Exit code to return when --help output is displayed (for unitesting)
 HELP_EXIT_CODE = 127
 
-# Operation is discovered by symlink name used to execute script
-DISCOVER_CREATE_NAME = 'openstack_discover_create.py'
-DESTROY_NAME = 'openstack_destroy.py'
+DEFAULT_TIMEOUT = 300
 
+# Must use format dictionary w/ keys: name, ip_addr, and uuid
 OUTPUT_FORMAT = """---
 inventory_hostname: {name}
-ansible_host: {floating_ip}
+ansible_host: {ip_addr}
 ansible_ssh_host: {{{{ ansible_host }}}}
+host_uuid: {uuid}
 """
+
 
 class OpenstackREST(object):
     """
@@ -75,8 +92,10 @@ class OpenstackREST(object):
     # Cache of current and previous response instances and json() return.
     response_json = None
     response_obj = None
+    response_code = None
     # Useful for debugging purposes
     previous_responses = None
+
 
     # Current session object
     service_sessions = None
@@ -148,9 +167,10 @@ class OpenstackREST(object):
                           ValueError,
                           "Unknown method %s" % method)
 
-        code = int(self.response_obj.status_code)
-        self.raise_if(code not in [200, 201, 202, 204],
-                      ValueError, "Failed: %s request to %s: %s" % (method, uri, code))
+        self.response_code = int(self.response_obj.status_code)
+        self.raise_if(self.response_code not in [200, 201, 202, 204],
+                      ValueError, "Failed: %s request to %s: %s" % (method, uri,
+                                                                    self.response_code))
 
         try:
             self.response_json = self.response_obj.json()
@@ -172,6 +192,12 @@ class OpenstackREST(object):
         Short-hand for ``service_request('compute', uri, unwrap, method, post_json)``
         """
         return self.service_request('compute', uri, unwrap, method, post_json)
+
+    def volume_request(self, uri, unwrap=None, method='get', post_json=None):
+        """
+        Short-hand for ``service_request('volume', uri, unwrap, method, post_json)``
+        """
+        return self.service_request('volume', uri, unwrap, method, post_json)
 
     def child_search(self, key, value=None, alt_list=None):
         """
@@ -195,31 +221,26 @@ class OpenstackREST(object):
         if value:
             found = [child for child in search_list
                      if child.get(key) == value]
-            try:
-                return found[0]
-            except IndexError, xcept:
-                self.raise_if(True,
-                              xcept,
-                              'Could not find key %s with value %s in %s'
-                              % (key, value, search_list))
+            self.raise_if(not found,
+                          IndexError,
+                          'Could not find key %s with value %s in %s'
+                          % (key, value, search_list))
+            return found[0]
         else:
             found = [child[key] for child in search_list
                      if key in child]
-            self.raise_if(not found,
-                          IndexError,
-                          'Could not find key %s in %s'
-                          % (key, search_list))
             return found
 
-    def server_list(self):
+    def server_list(self, key='name'):
         """
-        Cache and return list of server names or empty list
+        Cache list of servers and return list of values for key
 
-        :returns: list of strings
+        :param key: key to list values for (e.g. 'id')
+        :returns: List of values for key
         """
         self.compute_request('/servers', 'servers')
         try:
-            return self.child_search('name')
+            return self.child_search(key)
         except IndexError:
             return []
 
@@ -242,60 +263,44 @@ class OpenstackREST(object):
             uri = '/servers/%s' % uuid
         return self.compute_request(uri, unwrap='server')
 
-
-    def server_ip(self, name=None, uuid=None):
+    def server_ip(self, name=None, uuid=None, net_name=None, net_type='floating'):
         """
-        Cache details about server, return floating ip address of server
+        Cache details about server, return ip address of server
 
-        :param name: Optional, name of server to retrieve IP from
-        :param uuid: Optional, ID of server to retrieve IP from
+        :param name: Optional, exclusive of uuid, name of server
+        :param uuid: Optional, exclusive of name, ID of server
+        :param net_name: Optional, name of network or None for first-found
+        :param net_type: Type of interface to return (e.g. 'fixed')
         :returns: IPv4 address for server or None if none are assigned
+        :raises RuntimeError: Server does not exist
         """
-        self.server(name=name, uuid=uuid)
-        networks = self.response_json['addresses'].keys()
-        self.raise_if(len(networks) > 1,
-                      ValueError,
-                      "Found %s to be on more than one network" % name)
-        self.raise_if(len(networks) == 0,
-                      ValueError,
-                      "Found %s to be on no networks" % name)
         try:
-            ifaces = self.response_json['addresses'][networks[0]]
-            floating_iface = self.child_search('OS-EXT-IPS:type', 'floating',
-                                               alt_list=ifaces)
-            return floating_iface['addr']
-        except (KeyError, IndexError), xcept:
-            self.raise_if(True,
-                          xcept,
-                          "Found %s to be on a network"
-                          " without a floating IP address" % name)
+            server_details = self.server(name=name, uuid=uuid)
+        except (ValueError, IndexError, KeyError), xcept:  # Very bad, should never happen
+            # Assume caller is not catching RuntimeError, so this gets noticed
+            self.raise_if(True, RuntimeError,
+                          "Server %s/%s disappeared while checking for assigned IP: %s"
+                          % (name, uuid, xcept))
+        if net_name is None:  # first-found
+            net_names = server_details['addresses'].keys()
+            net_name = net_names[0]
+        iface = self.child_search('OS-EXT-IPS:type', net_type,
+                                  server_details['addresses'][net_name])
+        return iface['addr']
 
-    def server_delete(self, name=None, uuid=None):
+    def server_delete(self, uuid):
         """
-        Cache list of servers, try to delete server by name or uuid
+        Cache list of servers, try to delete server by uuid.
 
-        :param name: Optional, name of server to retrieve IP from
-        :param uuid: Optional, ID of server to retrieve IP from
-        :returns: any exception that was raised, or None
+        :param uuid: Unique ID of server to delete
+        :returns: Listing of server IDs (may include uuid)
         """
-        self.raise_if(not name and not uuid,
-                      ValueError,
-                      "Must provide either name or uuid")
-        if not uuid:
-            try:
-                server_details = self.server(name=name)
-            except IndexError, xcept:
-                return xcept # Server doesn't exist
-            uuid = server_details['id']
-
         try:
             self.compute_request('/servers/%s' % uuid, method='delete')
-            return None  # Good result
-        # This can fail for any number of reasons, can't list them all
-        # pylint: disable=W0703
+        # This can fail for any number of reasons, let caller deal with them
         except Exception, xcept:
-            return xcept
-
+            logging.warning("server_delete(%s) raised %s", uuid, xcept)
+        return self.server_list(key='id')
 
     def floating_ip(self):
         """
@@ -309,13 +314,40 @@ class OpenstackREST(object):
         except (KeyError, IndexError):
             return None
 
+    def attachments(self, name=None, uuid=None):
+        """
+        Cache details about server, return list of attached volume IDs
+
+        :param name: Optional, exclusive of uuid, name of server
+        :param uuid: Optional, exclusive of name, ID of server
+        :returns: List of volume IDs currently attached
+        """
+        long_key = 'os-extended-volumes:volumes_attached'
+        return self.child_search('id', alt_list=self.server(name, uuid)[long_key])
+
+    def volume_list(self):
+        """
+        Cache list of volumes, return list of volume ID's
+        """
+        self.volume_request('/volumes', 'volumes')
+        return self.child_search('id')
+
+    def volume(self, uuid):
+        """
+        Cache and return details about specific volume uuid
+
+        :param uuid: ID of volume to retrieve details about
+        """
+        return self.volume_request('/volumes/%s' % uuid, 'volume')
+
+
 class TimeoutAction(object):
     """
     ABC callable, raises an exception on timeout, or returns non-None value of done()
     """
 
-    sleep = 0.1  # Sleep time per iteration, avoids busy-waiting.
-    timeout = 300.0  # (seconds)
+    sleep = 0.5  # Sleep time per iteration, avoids busy-waiting.
+    timeout = DEFAULT_TIMEOUT  # (seconds)
     time_out_at = None  # absolute
     timeout_exception = RuntimeError
 
@@ -355,29 +387,34 @@ class TimeoutAction(object):
         raise NotImplementedError
 
 
-class TimeoutDeleted(TimeoutAction):
-    """Helper class to ensure server is deleted within timeout window"""
+class TimeoutDelete(TimeoutAction):
+    """
+    Helper class to ensure server is deleted within timeout window
 
-    timeout = 60
-    delete_result = None
+    :param server_id: uuid of server to delete
+    :raises ValueError: If more than one server with name is found
+    """
 
-    def __init__(self, name):
-        super(TimeoutDeleted, self).__init__(name)
+    def __init__(self, server_id):
         self.os_rest = OpenstackREST()
-        self.os_rest.server_delete(name)
+        self.os_rest.server_delete(uuid=server_id)
+        super(TimeoutDelete, self).__init__(server_id)
 
-    def am_done(self, name):
-        """Return Non-None if server does not appear in server list"""
-        if name not in self.os_rest.server_list():
-            return name
-        else:
+    def am_done(self, server_id):
+        """Return remaining ids when server_id not found, None if still present."""
+        server_ids = self.os_rest.server_list(key='id')
+        if server_id in server_ids:
+            logging.info("    Deleting...")
             return None
+        else:
+            logging.info("Confirmed VM %s does not exist", server_id)
+            return server_ids
 
 
 class TimeoutCreate(TimeoutAction):
     """Helper class to ensure server creation and state within timeout window"""
 
-    timeout = 120
+    sleep = 1
 
     POWERSTATES = {
         0: 'NOSTATE',
@@ -387,68 +424,88 @@ class TimeoutCreate(TimeoutAction):
         6: 'CRASHED',
         7: 'SUSPENDED'}
 
-    def __init__(self, name, auth_key_lines):
-        super(TimeoutCreate, self).__init__(name, auth_key_lines)
-        self.os_rest = OpenstackREST()
+    def __init__(self, name, auth_key_lines, image, flavor, userdata_filepath=None):
+        """
+        Callable instance to create VM or timeout by raising RuntimeError exception
 
+        :param name: VM Name to create (may already exist - not checked)
+        :param auth_key_lines: public key file contents for authorized_keys
+        :param image: Name of te image to use for VM
+        :param flavor: Name of the flavor to use for VM
+        :param userdata_filepath: Optional, path to file containing alternate cloud-config
+                                  userdata.  The token '{auth_key_lines}' will be
+                                  substituted with the ``auth_key_lines`` JSON list.
+        """
+        self.os_rest = OpenstackREST()
         self.os_rest.compute_request('/flavors', 'flavors')
-        flavor = self.os_rest.child_search('name', FLAVOR)
-        logging.debug("Flavor %s is id %s", FLAVOR, flavor['id'])
+        flavor_details = self.os_rest.child_search('name', flavor)
+        logging.debug("Flavor %s is id %s", flavor, flavor_details['id'])
 
         # Faster for the server to search for this
-        image = self.os_rest.service_request('image',
-                                             '/v2/images?name=%s&status=active' % IMAGE,
-                                             'images')
-        # Validates only one image was found, not really searching
-        image = self.os_rest.child_search('name', IMAGE)
-        logging.debug("Image %s is id %s", IMAGE, image['id'])
+        image_details = self.os_rest.service_request('image',
+                                                     '/v2/images?name=%s&status=active'
+                                                     % image, 'images')
+        self.os_rest.raise_if(len(image_details) != 1,
+                              RuntimeError,
+                              "Found more than one image named %s" % image)
+        image_details = image_details[0]
+        logging.debug("Image %s is id %s", image, image_details['id'])
 
-        user_data = ("#cloud-config\n"
-                     # Because I'm self-centered
-                     "timezone: US/Eastern\n"
-                     # We will configure our own filesystems/partitioning
-                     "growpart:\n"
-                     "    mode: off\n"
-                     # Don't add silly 'please login as' to .ssh/authorized_keys
-                     "disable_root: false\n"
-                     # Allow password auth in case it's needed
-                     "ssh_pwauth: True\n"
-                     # Import all ssh_authorized_keys (below) into these users
-                     "ssh_import_id: [root]\n"
-                     # public keys to import to users (above)
-                     "ssh_authorized_keys: %s\n"
-                     # Prevent creating the default, generic user
-                     "users:\n"
-                     "   - name: root\n"
-                     "     primary-group: root\n"
-                     "     homdir: /root\n"
-                     "     system: true\n" % auth_key_lines)
-        logging.debug("Userdata: %s", user_data)
+        if userdata_filepath:
+            with open(userdata_filepath, "rb") as userdata_file:
+                # Will throw exception if token is not found
+                userdata = userdata_file.read().format(auth_key_lines=str(auth_key_lines))
+        else:
+            userdata = ("#cloud-config\n"
+                        # Because I'm self-centered
+                        "timezone: US/Eastern\n"
+                        # We will configure our own filesystems/partitioning
+                        "growpart:\n"
+                        "    mode: off\n"
+                        # Don't add silly 'please login as' to .ssh/authorized_keys
+                        "disable_root: false\n"
+                        # Allow password auth in case it's needed
+                        "ssh_pwauth: True\n"
+                        # Import all ssh_authorized_keys (below) into these users
+                        "ssh_import_id: [root]\n"
+                        # public keys to import to users (above)
+                        "ssh_authorized_keys: %s\n"
+                        # Prevent creating the default, generic user
+                        "users:\n"
+                        "   - name: root\n"
+                        "     primary-group: root\n"
+                        "     homedir: /root\n"
+                        "     system: true\n" % str(auth_key_lines))
+        logging.debug("Userdata: %s", userdata)
 
         server_json = dict(
             name=name,
-            flavorRef=flavor['id'],
-            imageRef=image['id'],
-            user_data=b64encode(user_data)
+            flavorRef=flavor_details['id'],
+            imageRef=image_details['id'],
+            user_data=b64encode(userdata)
         )
-        logging.info("Submitting creation request")
+        logging.info("Submitting creation request for %s", name)
         self.os_rest.compute_request('/servers', 'server',
                                      'post', post_json=dict(server=server_json))
-        self.server_id = self.os_rest.response_json['id']
+        server_id = self.os_rest.response_json['id']
+        super(TimeoutCreate, self).__init__(server_id)
 
-    def am_done(self, name, auth_key_lines):
-        """Return VM's UUID if is active and powered up, None otherwise"""
-        del auth_key_lines  # Not needed here
-        server_details = self.os_rest.server(uuid=self.server_id)
+    def am_done(self, server_id):
+        """Return server_id if active and powered up, None otherwise"""
+        try:
+            server_details = self.os_rest.server(uuid=server_id)
+        except ValueError:   # Doesn't exist yet
+            return None
         vm_state = server_details['OS-EXT-STS:vm_state']
         power_state = self.POWERSTATES.get(server_details['OS-EXT-STS:power_state'],
                                            'UNKNOWN')
-        logging.info("     %s: %s, power %s", name, vm_state, power_state)
+        logging.info("     %s: %s, power %s", server_id, vm_state, power_state)
+        self.os_rest.raise_if(power_state == 'UNKNOWN',
+                              RuntimeError,
+                              "Got unknown power-state '%s' from response JSON"
+                              % server_details['OS-EXT-STS:power_state'])
         if power_state == 'RUNNING' and vm_state == 'active':
-            return self.server_id
-        elif power_state == 'UNKNOWN':
-            raise RuntimeError("Got unknown power-state '%s' from response JSON",
-                               % server_details['OS-EXT-STS:power_state'])
+            return server_details['id']
         else:
             return None
 
@@ -458,132 +515,378 @@ class TimeoutAssignFloatingIP(TimeoutAction):
 
     timeout = 30
 
-    def __init__(self, server_id):
-        super(TimeoutAssignFloatingIP, self).__init__(server_id)
+    def __init__(self, server_id, router_name=None):
         self.os_rest = OpenstackREST()
-
-        routers = self.os_rest.service_request('network', '/v2.0/routers', "routers")
-        # Assume the first router is the one to use
-        gw_info = routers[0]['external_gateway_info']
-        self.floating_network_id = gw_info['network_id']
-        logging.debug("Router %s network id %s for server id %s",
-                      routers[0]['name'],
-                      self.floating_network_id,
-                      server_id)
-
-    def am_done(self, server_id):
-        """Return assigned floating IP for server or None"""
-        floating_ip = self.os_rest.floating_ip()  # Get dis-used IP
-        if not floating_ip:
-            logging.info("Creating new floating IP address on network %s",
-                         self.floating_network_id)
-            floatingip = dict(floating_network_id=self.floating_network_id)
-
-            self.os_rest.service_request('network', '/v2.0/floatingips',
-                                         "floatingip", method='post',
-                                         post_json=dict(floatingip=floatingip))
-            floating_ip = self.os_rest.response_json['floating_ip_address']
+        self.os_rest.service_request('network', '/v2.0/routers', "routers")
+        if router_name:
+            router_details = self.os_rest.child_search('name', router_name)
         else:
-            logging.info("Found disused ip %s", floating_ip)
+            router_details = self.os_rest.response_json[0]
+        net_name = router_details['name']
+        gw_info = router_details['external_gateway_info']
+        net_id = gw_info['network_id']
+        logging.info("Router %s maps to network id %s", net_name, net_id)
+        super(TimeoutAssignFloatingIP, self).__init__(server_id, net_name, net_id)
 
-        logging.info("Attempting to assign floating IP %s to server id %s",
-                     floating_ip, server_id)
-        # Addresses TOCTOU: Another server grabs floating_ip before we do
+    def am_done(self, server_id, net_name, net_id):
+        """Return assigned floating IP for server or None if unassigned"""
         try:
+            ip_addr = self.os_rest.server_ip(uuid=server_id, net_name=net_name)
+            logging.info("    IP %s assigned", ip_addr)
+            return ip_addr
+        except (ValueError, IndexError, KeyError):
+            floating_ip = self.os_rest.floating_ip()  # Get dis-used IP
+            if not floating_ip:
+                logging.info("    creating new floating IP to %s", net_name)
+                floatingip = dict(floating_network_id=net_id)
+
+                self.os_rest.service_request('network', '/v2.0/floatingips',
+                                             "floatingip", method='post',
+                                             post_json=dict(floatingip=floatingip))
+                floating_ip = self.os_rest.response_json['floating_ip_address']
+
+            logging.info("    Assigning %s to server id %s",
+                         floating_ip, server_id)
+
             addfloatingip = dict(address=floating_ip)
-            self.os_rest.compute_request('/servers/%s/action' % server_id,
-                                         unwrap=None, method='post',
-                                         post_json=dict(addFloatingIp=addfloatingip))
-            self.os_rest.server_ip(uuid=server_id)
-            return floating_ip
-        except (ValueError, KeyError, IndexError):
-            logging.info("Assignment failed, retrying")
+            try:
+                self.os_rest.compute_request('/servers/%s/action' % server_id,
+                                             unwrap=None, method='post',
+                                             post_json=dict(addFloatingIp=addfloatingip))
+            except ValueError:
+                logging.info("    Assignment failed")
+
+            return None  # Assignment may have failed, another server snagged it.
+
+
+class TimeoutAttachVolume(TimeoutAction):
+    """
+    Helper class to create and attach a volume to a server
+
+    :param server_name: Used only for volume's description
+    :param server_id: Name of new volume and host proximity hint
+    :param size: Size in gigabytes for new volume
+    """
+
+    timeout = 120
+    attach_requested = False
+
+    def __init__(self, server_name, server_id, size):
+        self.os_rest = OpenstackREST()
+        volume = dict(size=size, name=server_id, multiattach=False,
+                      description='Created for %s (%s)' % (server_name, server_id))
+        # Try to allocate storage on same host as server
+        scheduler_hints = dict(same_host=[server_id])
+        logging.info("Creating %sGB volume for VM %s", size, server_name)
+        post_json = {'volume': volume,
+                     'OS-SCH-HNT:scheduler_hints': scheduler_hints}
+        self.os_rest.volume_request('/volumes', 'volume',
+                                    method='post', post_json=post_json)
+        volume_id = self.os_rest.response_json['id']
+        super(TimeoutAttachVolume, self).__init__(server_id, volume_id)
+
+
+    def am_done(self, server_id, volume_id):
+        """
+        Return volume_id if attachment complete or None if not
+        """
+        try:
+            volume_details = self.os_rest.volume(uuid=volume_id)
+        except ValueError:   # Doesn't exist yet
+            return None
+        attachments = [a['id'] for a in volume_details['attachments']]
+        attached_to_server = server_id in attachments
+        status = volume_details['status']
+        logging.info("     %s: status %s (attached %s)",
+                     volume_id, status, attached_to_server)
+        if not attached_to_server and not self.attach_requested:
+            volumeattachment = dict(volumeId=volume_id)
+            self.os_rest.compute_request('/servers/%s/os-volume_attachments' % server_id,
+                                         'volumeAttachment', method='post',
+                                         post_json=dict(volumeAttachment=volumeattachment))
+            self.attach_requested = True
+            return None
+        elif attached_to_server:
+            return volume_details['id']
+        else:
             return None
 
 
-def create(name, pub_key_files):
+class TimeoutDeleteVolume(TimeoutAction):
+    """Helper class to detach and delete a volume"""
+
+    detach_requests = None
+    vanish_fmt = 'Volume %s vanished while deleting, raised %s'
+
+    def __init__(self, volume_id):
+        self.os_rest = OpenstackREST()
+        self.detach_requests = set()
+        self._sentinel = self
+        super(TimeoutDeleteVolume, self).__init__(volume_id)
+
+    def detach_all(self, volume_id, server_ids):
+        """
+        Submit detach requests for all id's in server_ids for volume_id
+        """
+        for server_id in set(server_ids) - self.detach_requests:
+            try:
+                self.os_rest.compute_request('/servers/%s/os-volume_attachments/%s'
+                                             % (server_id, volume_id),
+                                             unwrap=None, method='delete')
+            # Server may have "gone away" before request could be submitted
+            except Exception, xcept:
+                logging.warning("detach server %s from volume %s raised %s",
+                                server_id, volume_id, xcept)
+            self.detach_requests |= set([server_id])
+
+    def _safe_query(self, volume_id):
+        try:  # Prevent TOCTOU: id in list, then vanishes before query
+            return self.os_rest.volume(volume_id)
+        except Exception, xcept:
+            volume_ids = self.os_rest.volume_list()
+            if volume_id not in volume_ids:
+                # Gone now, whew! this is okay
+                logging.warning(self.vanish_fmt, volume_id, xcept)
+                # Stub volume_details to satisfy original caller and identify race
+                return dict(id=volume_id, attachments=[], sentinel=self._sentinel)
+            else:
+                raise
+
+    def am_done(self, volume_id):
+        """
+        Return former volume details (or equivalent) if deleted, or None if not
+        """
+        volume_details = self._safe_query(volume_id)
+        if volume_details.get('sentinel', None) == self._sentinel:
+            return volume_details  # removal was the goal
+        attachments = self.os_rest.child_search('id',
+                                                alt_list=volume_details['attachments'])
+        if attachments:  # delete request will fail!
+            logging.warning("    Detaching unexpected VMs: %s", attachments)
+            self.detach_all(volume_id, attachments)
+            return None  # try again
+        else:
+            logging.info("     Deleting volume %s: status %s",
+                         volume_id, volume_details['status'])
+            try:  # Prevent TOCTOU: id vanishes before query
+                self.os_rest.volume_request('/volumes/%s' % volume_id,
+                                            unwrap=None, method='delete')
+            except Exception, xcept:
+                logging.warning(self.vanish_fmt, volume_id, xcept)
+                return volume_details
+            return None  # try again
+
+
+def discover(name=None, uuid=None, router_name=None, private=False):
+    """
+    Write ansible host_vars to stdout if a VM name exists with a floating IP.
+
+    :param name: Name of the VM to search for
+    :param uuid: Optional, search by uuid instead of name
+    :param router_name: Name of router for address lookup (if more than one)
+    """
+    os_rest = OpenstackREST()
+
+    # Prefer to operate on ID's because they can never race/clash
+    if uuid:
+        thing = uuid
+    elif name:
+        thing = name
+        if os_rest.server_list().count(name) > 1:
+            raise RuntimeError("More than one server %s found", name)
+    else:
+        raise ValueError("Must pass name and/or uuid to destroy()")
+
+    logging.info("Trying to discover server %s", thing)
+
+    if private:
+        net_type = 'fixed'
+    else:
+        net_type = 'floating'
+
+    # Throws exception if neither name or uuid are set
+    ip_addr = os_rest.server_ip(name=name, uuid=uuid,
+                                net_name=router_name, net_type=net_type)
+    if name is None:
+        name = os_rest.response_json['name']  # Cached by server_ip()
+    if uuid is None:
+        uuid = os_rest.response_json['id']
+    sys.stdout.write(OUTPUT_FORMAT.format(name=name, uuid=uuid, ip_addr=ip_addr))
+
+
+def destroy(name, uuid=None):
+    """
+    Destroy VM name (or uuid) and any volumes currently attached to it
+
+    :param name: Name of the VM to destroy
+    :param uuid: Optional, search by uuid instead of name
+    """
+
+    os_rest = OpenstackREST()
+
+    # Prefer to operate on ID's because they can never race/clash
+    if uuid:
+        thing = uuid
+    elif name:
+        thing = name
+        if os_rest.server_list().count(name) > 1:
+            raise RuntimeError("More than one server %s found", name)
+    else:
+        raise ValueError("Must pass name and/or uuid to destroy()")
+
+    logging.info("Deleting VM %s", thing)
+
+    server_id = None
+    volume_ids = []
+    try:
+        volume_ids = os_rest.attachments(name, uuid)  # Caches server details
+        server_id = os_rest.response_json.get('id')  # None if not found
+    except IndexError:  # Attachments and server not found
+        pass
+
+    if server_id:
+        TimeoutDelete(server_id)()
+
+    for volume_id in volume_ids:
+        logging.info("Deleting leftover volumes: %s", volume_id)
+        TimeoutDeleteVolume(volume_id)()
+
+
+# Arguments come from argparse, listing them all for clarity of intent
+def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
+           private=False, router_name=None, size=None, userdata_filepath=None):
     """
     Create a new VM with name and authorized_keys containing pub_key_files.
 
     :param name: Name of the VM to create
     :param pub_key_files: List of ssh public key files to read
+    :param image: Name of the openstack image to use
+    :param flavor: Name of the openstack VM flavor to use
+    :param private: When False, assign a floating IP to VM.
+    :param router_name: When private==False, router name to use, or None for first-found.
     """
 
     pubkeys = []
     for pub_key_file in pub_key_files:
-        logging.debug("Loading public key file: %s", pub_key_file)
+        logging.info("Loading public key file: %s", pub_key_file)
         with open(pub_key_file, 'rb') as key_file:
             pubkeys.append(key_file.read().strip())
             if 'PRIVATE KEY' in pubkeys[-1]:
                 raise ValueError("File %s appears to be a private, not a public, key"
                                  % pub_key_file)
-    logging.info("Deleting any partially created VM %s", name)
-    TimeoutDeleted(name)()
 
+    # Needed in case of exception
+    server_id = None
     try:
-        server_id = TimeoutCreate(name, pubkeys)()
-        logging.info("Creation successful, attempting to assign floating ip to VM %s", name)
-        floating_ip = TimeoutAssignFloatingIP(server_id)()
-        logging.info("Floating IP assignment successful, ip %s", floating_ip)
-    except:
-        # Fire and forget
-        os_rest = OpenstackREST()
-        os_rest.server_delete(name)
-        raise
-    sys.stdout.write(OUTPUT_FORMAT.format(name=name, floating_ip=floating_ip))
+        server_id = TimeoutCreate(name, pubkeys, image, flavor, userdata_filepath)()
+        logging.info("Creation successful, VM %s id %s", name, server_id)
 
+        if size:
+            logging.info("Attempting to create and attach %sGB size volume", size)
+            # name is added to volume description
+            TimeoutAttachVolume(name, server_id, int(size))()
 
-def discover(name, pub_key_files=None):
-    """
-    Write ansible host_vars to stdout if a VM name exists with a floating IP.
+        if not private:
+            logging.info("Attempting to assign floating ip on network %s", router_name)
+            TimeoutAssignFloatingIP(server_id, router_name)()
 
-    :param name: Name of the VM to search for
-    :param pub_key_files: Not used
-    """
-    # Allows earlier CLI parameter error detection
-    del pub_key_files
+        discover(name=name, uuid=server_id, router_name=router_name, private=private)
 
-    os_rest = OpenstackREST()
-    # Server is useless if it can't be reached
-    floating_ip = os_rest.server_ip(name)
+    # Must not leak servers or volumes, original exception will be re-raised
+    except Exception, xcept:
+        logging.error("Create threw %s", xcept)
+        destroy(name, server_id)
 
-    sys.stdout.write(OUTPUT_FORMAT.format(name=name, floating_ip=floating_ip))
-
-
-def destroy(name):
-    """
-    Destroy VM name
-
-    :param name: Name of the VM to destroy
-    """
-    TimeoutDeleted(name)()
-
-
-def parse_args(argv, operation):
+def parse_args(argv, operation='help'):
     """
     Examine command line arguments, show usage info if inappropriate for operation
 
     :param argv: List of command-line arguments
-    :param operation: String of 'discover', 'create', or 'destroy'
+    :param operation: String of 'discover', 'create', 'destroy' or 'help'
     :returns: Dictionary of parsed command-line options
     """
-    # N/B argv[0] is path to executed command
-    argv = argv[1:]
-    try:
-        parsed_args = dict(name=argv.pop(0))
-    except IndexError:
-        raise ValueError("Must pass server name as first parameter")
-    if operation in ['create', 'discover']:
-        if len(argv) < 1:
-            raise ValueError("Must pass server name, and one or more"
-                             " paths to public ssh key files as parameters")
-        parsed_args['pub_key_files'] = set(argv)
-    elif operation == 'help':
-        logging.info("FIXME: Some useful --help message")
-    elif operation not in ('discover', 'destroy'):
-        raise ValueError("Unknown operation operation %s, pass --help for help.",
-                         operation)
-    return parsed_args
+    # Operate on a copy
+    argv = list(argv)
+    parser = argparse.ArgumentParser(prog=argv.pop(0),
+                                     description=DESCRIPTION,
+                                     epilog=EPILOG,
+                                     add_help=ENABLE_HELP)
+
+    if operation != 'destroy':
+        parser.add_argument('--image', '-i', default='CentOS-Cloud-7',
+                            help=('If creating a VM, use this (existing) image instead'
+                                  ' of "CentOS-Cloud-7" (Optional).'))
+
+        parser.add_argument('--flavor', '-f', default='m1.medium',
+                            help=('If creating a VM, use this (existing) flavor'
+                                  ' instead of "m1.medium" (Optional).'))
+
+        parser.add_argument('--router', '-r', default=None, dest='router_name',
+                            help=('If creating a VM, assign a floating IP routed'
+                                  ' through gateway assigned to (existing) ROUTER,'
+                                  ' instead of first-found (Optional).'))
+
+        parser.add_argument('--private', '-p', default=False,
+                            action='store_true',
+                            help='If creating a VM, do not assign a floating IP (Optional).')
+
+        parser.add_argument('--size', '-s', default=None, type=int,
+                            help=('If creating a VM, also create and attach'
+                                  ' a volume with the same name, of SIZE'
+                                  ' gigabytes (Optional).'))
+
+        parser.add_argument('--userdata', '-u', default=None, dest='userdata_filepath',
+                            help=('Path to filename containing cloud-config userdata'
+                                  ' YAML to use instead of default (Optional).'))
+
+    # All operations get these
+    parser.add_argument('--verbose', '-v', default=False,
+                        action='store_true',
+                        help='Increate logging verbosity to maximum.')
+
+    parser.add_argument('--timeout', '-t', default=DEFAULT_TIMEOUT, type=int,
+                        help=('Major operations timeout (default %s) in seconds'
+                              ' (Optional).' % DEFAULT_TIMEOUT))
+
+    parser.add_argument('name',
+                        help='The VM name to search for, create, or destroy (required)')
+
+    # Consumer of remaining arguments must come last
+    if operation != 'destroy':
+        # "pubkey" will be a list, using "pubkeys" causes --help to be wrong
+        # (workaround below)
+        parser.add_argument('pubkey', nargs='+',
+                            help=('One or more paths to ssh public key files'
+                                  ' (not required for "%s")' % DESTROY_NAME))
+
+    if operation == 'help':
+        parser.print_help()
+        parser.exit()
+        return {}  # for unittests
+
+    args = parser.parse_args(argv)
+    logging.debug("Parsed arguments: %s", args)
+
+    # Verbose was already processed in __main__, only exists here for --help
+    del args.verbose
+
+    # Consume this one right here
+    TimeoutAction.timeout = args.timeout
+    del args.timeout
+
+    # Encode as dictionary, makes parameter passing easier to unitest
+    dargs = dict([(n, getattr(args, n))
+                  for n in args.__dict__.keys()  # no better way to do ths
+                  if n[0] != '_'])
+
+    # Workaround: name should be plural
+    if 'pubkey' in dargs:
+        dargs['pub_key_files'] = dargs['pubkey']  # Can't use dest (above)
+        del dargs['pubkey']
+
+    logging.info("Processed arguments: %s", dargs)
+
+    return dargs
 
 
 def pip_opt_arg(option, arg_list, delim=','):
@@ -634,20 +937,24 @@ def main(argv, service_sessions):
                              to request-like session instances
     :returns: Exit code integer
     """
-    _ = OpenstackREST(service_sessions)
     basename = os.path.basename(argv[0])
-    if basename == DISCOVER_CREATE_NAME:
+    if basename in (DISCOVER_CREATE_NAME, ONLY_CREATE_NAME):
         dargs = parse_args(argv, 'discover')
         logging.info('Attempting to find VM %s.', dargs['name'])
         # The general exception is re-raised on secondary exception
-        # pylint: disable=W0703
         try:
-            discover(**dargs)
+            OpenstackREST(service_sessions)
+            discover(dargs['name'], dargs['router_name'], dargs['private'])
+            if basename == ONLY_CREATE_NAME:  # no exception == found VM
+                logging.error("Found existing vm %s, refusing to re-create!"
+                              "  Exiting non-zero.", dargs['name'])
+                sys.exit(1)
         except Exception, xcept:
             # Not an error (yet), will try creating VM next
             logging.warning("Failed to find existing VM: %s.", dargs['name'])
             try:
                 dargs = parse_args(argv, 'create')
+                OpenstackREST(service_sessions)
                 logging.info('Attempting to create new VM %s.', dargs['name'])
                 create(**dargs)
             except:
@@ -658,10 +965,13 @@ def main(argv, service_sessions):
                 raise
     elif basename == DESTROY_NAME:
         dargs = parse_args(argv, 'destroy')
+        OpenstackREST(service_sessions)
         logging.info("Destroying VM %s", dargs['name'])
-        destroy(**dargs)
+        destroy(dargs['name'])
     else:
+        logging.error("Script was not called as %s, %s, or %s", *ALLOWED_NAMES)
         parse_args(argv, 'help')
+
 
 
 def api_debug_dump():
@@ -692,11 +1002,11 @@ def api_debug_dump():
 
 if __name__ == '__main__':
     LOGGER = logging.getLogger()
-    # Lower default to INFO level and higher
-    if [arg for arg in sys.argv if arg == '-v']:
-        sys.argv.remove('-v')
+    if [arg for arg in sys.argv if arg == '-v' or arg == '--verbose']:
+        # Lower to DEBUG for massively detailed output
         LOGGER.setLevel(logging.DEBUG)
     else:
+        # Lower to INFO level and higher for general details
         LOGGER.setLevel(logging.INFO)
     del LOGGER  # no longer needed
     # N/B: Any/All names used here are in the global scope
@@ -709,9 +1019,10 @@ if __name__ == '__main__':
     # Import module from w/in virtual environment into global namespace
     os_client_config = __import__('os_client_config', globals(), locals())
 
-    config = os_client_config.get_config()
+    service_names = os_client_config.get_config().get_services()
+    logging.debug("Initializing openstack services: %s", service_names)
     sessions = dict([(svc, os_client_config.make_rest_client(svc))
-                     for svc in config.get_services()])
+                     for svc in service_names])
     main(sys.argv, sessions)
 
     try:

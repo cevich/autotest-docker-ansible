@@ -3,114 +3,18 @@
     "GET": "http://1.2.3.4/servers",
     "status_code": 200,
     "response": {
-      "servers": [
-        {
-          "id": "0e94ba35-7f76-461f-b67a-c6f54802b17b",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/0e94ba35-7f76-461f-b67a-c6f54802b17b",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/0e94ba35-7f76-461f-b67a-c6f54802b17b",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "rhel"
-        },
-        {
-          "id": "b757e40c-6bbe-4740-b100-50e3aba58936",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/b757e40c-6bbe-4740-b100-50e3aba58936",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/b757e40c-6bbe-4740-b100-50e3aba58936",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "centos"
-        },
-        {
-          "id": "fccbb584-c232-478d-a190-94394a991174",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/fccbb584-c232-478d-a190-94394a991174",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/fccbb584-c232-478d-a190-94394a991174",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "fedora"
-        },
-        {
-          "id": "994140a2-aab1-4623-9259-da0bf4cdf9b7",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/994140a2-aab1-4623-9259-da0bf4cdf9b7",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/994140a2-aab1-4623-9259-da0bf4cdf9b7",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "test"
-        }
-      ]
-    }
+      "servers": []
+    },
+    "sequence_number": 10,
+    "status_code": 200
   },
   {
     "GET": "http://1.2.3.4/servers",
     "status_code": 200,
     "response": {
-      "servers": [
-        {
-          "id": "0e94ba35-7f76-461f-b67a-c6f54802b17b",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/0e94ba35-7f76-461f-b67a-c6f54802b17b",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/0e94ba35-7f76-461f-b67a-c6f54802b17b",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "rhel"
-        },
-        {
-          "id": "b757e40c-6bbe-4740-b100-50e3aba58936",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/b757e40c-6bbe-4740-b100-50e3aba58936",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/b757e40c-6bbe-4740-b100-50e3aba58936",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "centos"
-        },
-        {
-          "id": "fccbb584-c232-478d-a190-94394a991174",
-          "links": [
-            {
-              "href": "http://1.2.3.4/servers/fccbb584-c232-478d-a190-94394a991174",
-              "rel": "self"
-            },
-            {
-              "href": "http://1.2.3.4/servers/fccbb584-c232-478d-a190-94394a991174",
-              "rel": "bookmark"
-            }
-          ],
-          "name": "fedora"
-        }
-      ]
-    }
+      "servers": []
+    },
+    "sequence_number": 20,
+    "status_code": 200
   }
 ]
