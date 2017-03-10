@@ -4,16 +4,18 @@
 
 cloud_asserts:
     - 'kommandir_name is defined'
-    - 'workspace is defined'
-    - 'kommandir_workspace is defined'
+    - 'hostvars.exekutir.workspace is defined'
+    - 'hostvars.exekutir.kommandir_workspace is defined'
+    # Somehow, somewhere, this file must be made to exist inside workspace
     - 'lookup("pipe","test -r $WORKSPACE/clouds.yml; echo $?) == "0"'
-    - 'lookup("pipe","test -r ${ANSIBLE_PRIVATE_KEY_FILE}; echo $?) == "0"'
-    - 'lookup("pipe","test -r ${ANSIBLE_PRIVATE_KEY_FILE}.pub; echo $?) == "0"'
+    # These two are guaranteed by exekutir.xn
+    - 'lookup("pipe","test -r {{ hostvars.exekutir.workspace }}/ssh/exekutir_key; echo $?) == "0"'
+    - 'lookup("pipe","test -r {{ hostvars.exekutir.workspace }}/ssh/exekutir_key.pub; echo $?) == "0"'
 
 cloud_provisioning_command:
-    command: "{{ kommandir_workspace }}/bin/openstack_discover_create.py {{ uuid }} {{ kommandir_name }} ${ANSIBLE_PRIVATE_KEY_FILE} ${ANSIBLE_PRIVATE_KEY_FILE}.pub"
+    command: "{{ kommandir_workspace }}/bin/openstack_discover_create.py {{ kommandir_name }} {{ hostvars.exekutir.workspace }}/ssh/exekutir_key.pub {{ extra_ssh_pub_keys | join(' ') if extra_ssh_pub_keys is defined else omit }}"
     chdir: "{{ workspace }}"
 
 cloud_destruction_command:
-    command: "{{ kommandir_workspace }}/bin/openstack_destroy.py {{ uuid }} {{ kommandir_name }} ${ANSIBLE_PRIVATE_KEY_FILE} ${ANSIBLE_PRIVATE_KEY_FILE}.pub"
+    command: "{{ kommandir_workspace }}/bin/openstack_destroy.py {{ kommandir_name }}
     chdir: "{{ workspace }}"
