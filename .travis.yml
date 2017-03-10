@@ -19,7 +19,7 @@ git:
 
 env:
     global:
-        - TYPOS="komandir executir ecoh roel fixup! squash! FIXME id_rsa"
+        - TYPOS="komandir executir ecoh roel fixup! squash! FIXME id_rsa '<<<<<<<' '=======' '>>>>>>>'"
         - PATH="$PATH:$VIRTUAL_ENV/bin"    
         - ANSIBLE_VERSION=2.1
 
@@ -33,6 +33,6 @@ script:
     # Test building docs
     - cd docs && make html; cd ..
     - unit2 -vfc
-    # Check for some typos / git commit problems
-    - for i in $TYPOS; do echo; echo "$i"; git log -1 -p HEAD^ | grep -a -2 "$i"; test "$?" == "1" || exit 1; done
+    # Check for some typos / git commit problems (except in this file)
+    - for i in $TYPOS; do echo; echo "$i"; git log -p origin/master..HEAD $(ls -1 | grep -v .travis.yml) | grep -a -2 "$i"; test "$?" == "1" || exit 1; done
     - ./test_exekutir_xn.sh

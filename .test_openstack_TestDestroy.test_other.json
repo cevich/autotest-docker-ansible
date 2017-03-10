@@ -1,0 +1,30 @@
+[
+  {
+    "GET": "http://1.2.3.4/servers",
+    "status_code": 200,
+    "response": {
+      "servers": [
+        {
+          "id": "0e94ba35-7f76-461f-b67a-c6f54802b17b",
+          "name": "deleting"
+        }
+      ]
+    },
+    "sequence_number": 10,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "status_code": 200,
+    "response": {
+      "servers": [
+        {
+          "id": "f54802b17b",
+          "name": "newone"
+        }
+      ]
+    },
+    "sequence_number": 20,
+    "status_code": 200
+  }
+]

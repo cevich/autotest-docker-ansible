@@ -1,0 +1,196 @@
+[
+  {
+    "GET": "http://1.2.3.4/flavors",
+    "response": {
+      "flavors": [
+        {
+          "id": "3",
+          "name": "flavor_name"
+        }
+      ]
+    },
+    "sequence_number": 20,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/v2/images?name=image_name&status=active",
+    "response": {
+      "first": "/v2/images?status=active&name=image_name",
+      "images": [
+        {
+          "id": "the_image_id",
+          "name": "image_name",
+          "status": "active"
+        }
+      ],
+      "schema": "/v2/schemas/images"
+    },
+    "sequence_number": 30,
+    "status_code": 200
+  },
+  {
+    "POST": "http://1.2.3.4/servers",
+    "response": {
+      "server": {
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08"
+      }
+    },
+    "sequence_number": 40,
+    "status_code": 202
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 0,
+        "OS-EXT-STS:vm_state": "building",
+        "addresses": {
+          "network_name": []
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "something"
+      }
+    },
+    "sequence_number": 50,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "frobnicating",
+        "addresses": {
+          "network_name": []
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "something"
+      }
+    },
+    "sequence_number": 60,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "5.4.3.2",
+              "version": 4
+            }
+          ]
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "ACTIVE"
+      }
+    },
+    "sequence_number": 70,
+    "status_code": 200
+  },
+  {
+    "POST": "http://1.2.3.4/volumes",
+    "response": {
+        "volume": {
+            "id": "12345abcde"
+        }
+    },
+    "sequence_number": 72,
+    "status_code": 202
+  },
+  {
+    "GET": "http://1.2.3.4/volumes/12345abcde",
+    "sequence_number": 73,
+    "status_code": 404
+  },
+  {
+    "GET": "http://1.2.3.4/volumes/12345abcde",
+    "response": {
+      "volume": {
+        "attachments": [],
+        "id": "12345abcde",
+        "size": 11000000000,
+        "status": "availble",
+        "name": "somename"
+        }
+    },
+    "sequence_number": 74,
+    "status_code": 200
+  },
+  {
+    "POST": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08/os-volume_attachments",
+    "response": {
+      "volumeAttachment": {
+        "device": "/dev/vdb",
+        "id": "12345abcde",
+        "serverId": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "volumeId": "12345abcde"
+      }
+    },
+    "sequence_number": 76,
+    "status_code": 202
+  },
+  {
+    "GET": "http://1.2.3.4/volumes/12345abcde",
+    "response": {
+      "volume": {
+        "attachments": [{"id":"102f1788-3b0a-4a37-aecc-547996c1db08"}],
+        "id": "12345abcde",
+        "size": 11000000000,
+        "status": "in-use",
+        "name": "somename"
+        }
+    },
+    "sequence_number": 74,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 80,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "5.4.3.2",
+              "version": 4
+            }
+          ]
+        },
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "status": "ACTIVE"
+      }
+    },
+    "sequence_number": 90,
+    "status_code": 200
+  }
+]

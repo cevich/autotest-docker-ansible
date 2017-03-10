@@ -1,0 +1,179 @@
+[
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+          "name": "deleteme"
+        },
+        {
+          "id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+          "name": "troublemaker"
+        }
+      ]
+    },
+    "sequence_number": 5,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+          "name": "deleteme"
+        },
+        {
+          "id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+          "name": "troublemaker"
+        }
+      ]
+    },
+    "sequence_number": 10,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+    "response": {
+      "server": {
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:76",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "5.4.3.2",
+              "version": 4
+            },
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:1b:51:77",
+              "OS-EXT-IPS:type": "floating",
+              "addr": "4.5.6.7",
+              "version": 4
+            }
+          ]
+        },
+        "id": "1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+        "name": "deleteme",
+        "os-extended-volumes:volumes_attached": [
+            {"id": "4150770f-68b1-4ead-bce2-9f5a0eef8831"}
+        ],
+        "status": "ACTIVE"
+      }
+    },
+    "sequence_number": 12,
+    "status_code": 200
+  },
+  {
+    "DELETE": "http://1.2.3.4/servers/1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+    "sequence_number": 20,
+    "status_code": 204,
+    "response": null
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "295eb339-d94a-4a12-8c80-7a2b81d473d6",
+          "name": "deleteme"
+        },
+        {
+          "id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+          "name": "troublemaker"
+        },
+        {
+          "id": "1d14de48-3ab0-4a0c-8c9f-65f00085d4ec",
+          "name": "deleteme"
+        }
+      ]
+    },
+    "sequence_number": 25,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+          "name": "troublemaker"
+        },
+        {
+          "id": "295eb339-d94a-4a12-8c80-7a2b81d473d6",
+          "name": "deleteme"
+        }
+      ]
+    },
+    "sequence_number": 30,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/volumes/4150770f-68b1-4ead-bce2-9f5a0eef8831",
+    "response": {
+      "volume": {
+        "attachments": [
+          {"id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a"}
+        ],
+        "id": "4150770f-68b1-4ead-bce2-9f5a0eef8831",
+        "size": 10,
+        "status": "in-use",
+        "name": "deleteme"
+        }
+    },
+    "sequence_number": 46,
+    "status_code": 200
+  },
+  {
+    "DELETE": "http://1.2.3.4/servers/c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a/os-volume_attachments/4150770f-68b1-4ead-bce2-9f5a0eef8831",
+    "sequence_number": 50,
+    "status_code": 204
+  },
+  {
+    "GET": "http://1.2.3.4/volumes/4150770f-68b1-4ead-bce2-9f5a0eef8831",
+    "response": {
+      "volume": {
+        "attachments": [
+          {"id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a"}
+        ],
+        "id": "4150770f-68b1-4ead-bce2-9f5a0eef8831",
+        "size": 10,
+        "status": "in-use",
+        "name": "deleteme"
+        }
+    },
+    "sequence_number": 54,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/volumes/4150770f-68b1-4ead-bce2-9f5a0eef8831",
+    "response": {
+      "volume": {
+        "attachments": [],
+        "id": "4150770f-68b1-4ead-bce2-9f5a0eef8831",
+        "size": 10,
+        "status": "available",
+        "name": "deleteme"
+        }
+    },
+    "sequence_number": 58,
+    "status_code": 200
+  },
+  {
+    "DELETE": "http://1.2.3.4/volumes/4150770f-68b1-4ead-bce2-9f5a0eef8831",
+    "sequence_number": 59,
+    "status_code": 204
+  },
+  {
+    "GET": "http://1.2.3.4/volumes",
+    "response": {
+      "volumes": [
+        {"id": "47e8ff25-1465-49c7-a3c5-8c877425d973", "name": "newone"}
+      ]
+    },
+    "sequence_number": 60,
+    "status_code": 200
+  }
+]
