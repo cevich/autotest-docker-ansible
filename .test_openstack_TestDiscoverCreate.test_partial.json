@@ -1,0 +1,469 @@
+[
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "bad_foobar_id",
+          "links": [
+            {
+              "href": "http://1.2.3.4/servers/bad_foobar_id",
+              "rel": "self"
+            },
+            {
+              "href": "http://1.2.3.4/servers/bad_foobar_id",
+              "rel": "bookmark"
+            }
+          ],
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 0,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/bad_foobar_id",
+    "response": {
+      "server": {
+        "OS-DCF:diskConfig": "AUTO",
+        "OS-EXT-AZ:availability_zone": "nova",
+        "OS-EXT-STS:power_state": 0,
+        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "error",
+        "OS-SRV-USG:launched_at": null,
+        "OS-SRV-USG:terminated_at": null,
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:b5:ca:67",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "8.8.8.8",
+              "version": 4
+            }
+          ]
+        },
+        "config_drive": "",
+        "created": "2017-03-07T20:43:20Z",
+        "fault": {
+          "code": 500,
+          "created": "2017-03-07T20:43:27Z",
+          "message": "Big error message"
+        },
+        "flavor": {
+          "id": "3",
+          "links": [
+            {
+              "href": "http://1.2.3.4/flavors/3",
+              "rel": "bookmark"
+            }
+          ]
+        },
+        "hostId": "bignumber",
+        "id": "bad_foobar_id",
+        "image": {
+          "id": "image_id",
+          "links": [
+            {
+              "href": "http://1.2.3.4/images/image_id",
+              "rel": "bookmark"
+            }
+          ]
+        },
+        "key_name": null,
+        "links": [
+          {
+            "href": "http://1.2.3.4/servers/bad_foobar_id",
+            "rel": "self"
+          },
+          {
+            "href": "http://1.2.3.4/servers/bad_foobar_id",
+            "rel": "bookmark"
+          }
+        ],
+        "metadata": {},
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "security_groups": [
+          {
+            "name": "default"
+          }
+        ],
+        "status": "ERROR",
+        "tenant_id": "tenant_id",
+        "updated": "2017-03-07T20:43:26Z",
+        "user_id": "user_id"
+      }
+    },
+    "sequence_number": 10,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "bad_foobar_id",
+          "links": [
+            {
+              "href": "http://1.2.3.4/servers/bad_foobar_id",
+              "rel": "self"
+            },
+            {
+              "href": "http://1.2.3.4/servers/bad_foobar_id",
+              "rel": "bookmark"
+            }
+          ],
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 20,
+    "status_code": 200
+  },
+  {
+    "DELETE": "http://1.2.3.4/servers/bad_foobar_id",
+    "sequence_number": 30
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+          "links": [
+            {
+              "href": "http://1.2.3.4/servers/c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+              "rel": "self"
+            },
+            {
+              "href": "http://1.2.3.4/servers/c80f2e0a-09b7-4ad0-ac34-e40a5cfd418a",
+              "rel": "bookmark"
+            }
+          ],
+          "name": "some_server"
+        }
+      ]
+    },
+    "sequence_number": 40,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/flavors",
+    "response": {
+      "flavors": [
+        {
+          "id": "3",
+          "links": [
+            {
+              "href": "http://1.2.3.4/flavors/3",
+              "rel": "self"
+            },
+            {
+              "href": "http://1.2.3.4/flavors/3",
+              "rel": "bookmark"
+            }
+          ],
+          "name": "m1.medium"
+        }
+      ]
+    },
+    "sequence_number": 50,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/v2/images?name=CentOS-Cloud-7&status=active",
+    "response": {
+      "first": "/v2/images?status=active&name=CentOS-Cloud-7",
+      "images": [
+        {
+          "architecture": "x86_64",
+          "checksum": "c2ebde45f03aa35c6d996c3de984a9d6",
+          "container_format": "bare",
+          "created_at": "2017-01-04T17:13:31Z",
+          "description": "https://wiki.centos.org/Download",
+          "disk_format": "qcow2",
+          "file": "/v2/images/centos_image_id/file",
+          "id": "centos_image_id",
+          "min_disk": 0,
+          "min_ram": 0,
+          "name": "CentOS-Cloud-7",
+          "owner": "tenant_id",
+          "protected": true,
+          "schema": "/v2/schemas/image",
+          "self": "/v2/images/centos_image_id",
+          "size": 898236416,
+          "status": "active",
+          "tags": [],
+          "updated_at": "2017-01-04T17:14:55Z",
+          "virtual_size": null,
+          "visibility": "private"
+        }
+      ],
+      "schema": "/v2/schemas/images"
+    },
+    "sequence_number": 60,
+    "status_code": 200
+  },
+  {
+    "POST": "http://1.2.3.4/servers",
+    "response": {
+      "server": {
+        "OS-DCF:diskConfig": "MANUAL",
+        "adminPass": "",
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "links": [
+          {
+            "href": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+            "rel": "self"
+          },
+          {
+            "href": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+            "rel": "bookmark"
+          }
+        ],
+        "security_groups": [
+          {
+            "name": "default"
+          }
+        ]
+      }
+    },
+    "sequence_number": 70,
+    "status_code": 202
+  },
+  {
+    "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+    "response": {
+      "server": {
+        "OS-DCF:diskConfig": "MANUAL",
+        "OS-EXT-AZ:availability_zone": "",
+        "OS-EXT-STS:power_state": 0,
+        "OS-EXT-STS:task_state": "scheduling",
+        "OS-EXT-STS:vm_state": "building",
+        "OS-SRV-USG:launched_at": null,
+        "OS-SRV-USG:terminated_at": null,
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {},
+        "config_drive": "",
+        "created": "2017-03-07T20:44:13Z",
+        "hostId": "",
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "progress": 0,
+        "status": "BUILD",
+        "tenant_id": "tenant_id",
+        "updated": "2017-03-07T20:44:13Z",
+        "name": "foobar",
+        "user_id": "user_id"
+      }
+    },
+    "sequence_number": 90,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+    "response": {
+      "server": {
+        "OS-DCF:diskConfig": "MANUAL",
+        "OS-EXT-AZ:availability_zone": "nova",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "active",
+        "OS-SRV-USG:launched_at": "2017-03-07T20:44:27.000000",
+        "OS-SRV-USG:terminated_at": null,
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:ab:37",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "2.3.4.5",
+              "version": 4
+            }
+          ]
+        },
+        "config_drive": "",
+        "created": "2017-03-07T20:44:13Z",
+        "flavor": {
+          "id": "3",
+          "links": [
+            {
+              "href": "http://1.2.3.4/flavors/3",
+              "rel": "bookmark"
+            }
+          ]
+        },
+        "hostId": "39d4a5e9ea77f31a399c20189c24e62c83184be93daa1775576756b3",
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "image": {
+          "id": "centos_image_id",
+          "links": [
+            {
+              "href": "http://1.2.3.4/images/centos_image_id",
+              "rel": "bookmark"
+            }
+          ]
+        },
+        "key_name": null,
+        "links": [
+          {
+            "href": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+            "rel": "self"
+          },
+          {
+            "href": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+            "rel": "bookmark"
+          }
+        ],
+        "metadata": {},
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "progress": 0,
+        "security_groups": [
+          {
+            "name": "default"
+          }
+        ],
+        "status": "ACTIVE",
+        "tenant_id": "tenant_id",
+        "updated": "2017-03-07T20:44:27Z",
+        "user_id": "user_id"
+      }
+    },
+    "sequence_number": 410,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/v2.0/routers",
+    "response": {
+      "routers": [
+        {
+          "admin_state_up": true,
+          "external_gateway_info": {
+            "enable_snat": true,
+            "external_fixed_ips": [
+              {
+                "ip_address": "3.4.5.6",
+                "subnet_id": "subnet_id"
+              }
+            ],
+            "network_id": "network_name_id"
+          },
+          "id": "8f660c43-3a6f-4ee9-97a9-e3f2fda9fd32",
+          "name": "network_name",
+          "routes": [],
+          "status": "ACTIVE",
+          "tenant_id": "tenant_id"
+        }
+      ]
+    },
+    "sequence_number": 420,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/v2.0/floatingips",
+    "response": {
+      "floatingips": [
+        {
+          "fixed_ip_address": null,
+          "floating_ip_address": "6.5.4.3",
+          "floating_network_id": "network_name_id",
+          "id": "44608161-678a-49cf-b1d5-fc4535910fbf",
+          "port_id": null,
+          "router_id": null,
+          "status": "DOWN",
+          "tenant_id": "tenant_id"
+        }
+      ]
+    },
+    "sequence_number": 430,
+    "status_code": 200
+  },
+  {
+    "POST": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06/action"
+  },
+  {
+    "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+    "response": {
+      "server": {
+        "OS-DCF:diskConfig": "MANUAL",
+        "OS-EXT-AZ:availability_zone": "nova",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "active",
+        "OS-SRV-USG:launched_at": "2017-03-07T20:44:27.000000",
+        "OS-SRV-USG:terminated_at": null,
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:ab:37",
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "2.3.4.5",
+              "version": 4
+            },
+            {
+              "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:ab:37",
+              "OS-EXT-IPS:type": "floating",
+              "addr": "6.5.4.3",
+              "version": 4
+            }
+          ]
+        },
+        "config_drive": "",
+        "created": "2017-03-07T20:44:13Z",
+        "flavor": {
+          "id": "3",
+          "links": [
+            {
+              "href": "http://1.2.3.4/flavors/3",
+              "rel": "bookmark"
+            }
+          ]
+        },
+        "hostId": "39d4a5e9ea77f31a399c20189c24e62c83184be93daa1775576756b3",
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "image": {
+          "id": "centos_image_id",
+          "links": [
+            {
+              "href": "http://1.2.3.4/images/centos_image_id",
+              "rel": "bookmark"
+            }
+          ]
+        },
+        "key_name": null,
+        "links": [
+          {
+            "href": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+            "rel": "self"
+          },
+          {
+            "href": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+            "rel": "bookmark"
+          }
+        ],
+        "metadata": {},
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [],
+        "progress": 0,
+        "security_groups": [
+          {
+            "name": "default"
+          }
+        ],
+        "status": "ACTIVE",
+        "tenant_id": "tenant_id",
+        "updated": "2017-03-07T20:44:27Z",
+        "user_id": "user_id"
+      }
+    },
+    "sequence_number": 440,
+    "status_code": 200
+  }
+]
