@@ -5,7 +5,6 @@ use_dnf: True
 installed_rpms:
     - docker
     - atomic
-    - docker-selinux
     - procps
     - tar
     - findutils

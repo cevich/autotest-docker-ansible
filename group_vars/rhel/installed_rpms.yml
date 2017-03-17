@@ -10,7 +10,6 @@ installed_rpms:
     - docker
     - docker-latest
     - atomic
-    - docker-selinux
     - procps
     - tar
     - lvm2
