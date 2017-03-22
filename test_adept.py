@@ -641,17 +641,9 @@ class TestParameters(TestCaseBase):
         for _mock in mocks.values():
             self.assertTrue(_mock.call_count)
             for name, args, dargs in _mock.mock_calls:
-                self.assertEqual(name, '')  # TODO: Investigate why no name.
+                self.assertEqual(name, '')
                 self.assertEqual(dargs, {})
                 del args
-                # TODO: Investigate why this doesn't work
-                # First two args are the same for all these methods
-                # field, _string = args[1:3]
-                # expected_method = self.uut.ParametersData.xforms[field]
-                # actual_method = _mock.func_name
-                # msg = "verifying Parameters.%s(%s, %s)" % (actual_method,
-                #                                           field, _string)
-                # self.assertEqual(expected_method, actual_method, msg=msg)
 
     def test_mangle_verify(self):
         """
@@ -1088,9 +1080,6 @@ class TestPlaybook(TestActionBaseBase):
         # Create required (self.uut.open) to mock where it would be looked up
         # before a builtin
         with PatchedParameters(self.uut):
-            # FIXME: This needs to result in parameters.mangle_verify
-            #        altering the path to make sure it's being used
-            #        correctly
             self.patch_os_path(self.UUT)
             values = ('/path/to/script',
                       'test_context', 'test_workspace', 'test_yaml', '      ')
@@ -1175,7 +1164,6 @@ class TestVariable(TestCaseBase):
         """Verify positive documented behavior of init()"""
         for param, value in {'value': 'foo', 'from_env': 'bar',
                              'from_file': "/some/file/to/read"}.items():
-            # TODO: patch open() and read() to test from_fil
             test_var = self.uut.Variable(123, name='foo', **{param: value})
             self.assertEqual(test_var.global_vars, self.uut.Command.global_vars)
             self.assertEqual(self.uut.Command.global_vars, {})
@@ -1201,20 +1189,6 @@ class TestVariable(TestCaseBase):
                 self.assertEqual(test_var(), 0)  # side effects!!!!
             self.assertEqual(self.uut.ActionBase.global_vars,
                              {'BAZ': 'baz', 'FOO': 'foo', 'BAR': 'bar'})
-
-class TestAIsBase(TestCaseBase):
-    """action_items(yaml_document, parameters_source=None)"""
-
-    # Placeholders for inputs
-    yaml_document = None
-    parameters_source = None
-
-    def setUp(self):
-        self.yaml_document = []
-        self.parameters_source = ['/path/to/adept.py']
-        super(TestAIsBase, self).setUp()
-
-    # TODO: Write me
 
 
 
