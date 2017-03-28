@@ -6,6 +6,7 @@
 
 - assert:
     that:
+        - 'empty is defined'
         - "workspace | default() not in empty"
         - "adept_debug | default() not in empty"
 

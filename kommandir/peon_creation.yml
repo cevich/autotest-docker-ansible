@@ -1,0 +1,15 @@
+---
+
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: peons:!nocloud
+  # Inventory is incomplete
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  roles:
+    - common
+    - role: peon_created
+      when: ansible_host | default() not in empty
+    - role: peon_up
+      reboot_context: "creation"

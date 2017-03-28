@@ -1,5 +1,9 @@
 ---
 
-# Always create/locate kommandir (it may have gone away) and
-# acquire shared lock.
+# Always create/locate kommandir (it may have gone away)
 - include: setup_before_job.yml
+
+- hosts: kommandir
+  gather_facts: False
+  tasks:
+    - meta: clear_host_errors

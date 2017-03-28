@@ -1,0 +1,12 @@
+---
+
+docker_autotest_timeout: 30
+
+job_subthings: >
+    docker_cli/dockerhelp,
+    docker_cli/version,
+    docker_cli/pull,
+    docker_cli/create,
+    docker_cli/start,
+    docker_cli/run,
+    docker_cli/stop

@@ -1,0 +1,21 @@
+---
+
+peon_groups:
+    - openstack
+    - rhel
+    - subscribed
+    - updated
+    - docker
+    - autotested
+    - liverestore
+
+peon_image: 'rhel-7.3-server-x86_64-latest'
+
+peon_size: '20'
+
+peon_flavor: 'm1.medium'
+
+peon_pre_raw_cmds:
+    - "type -P python || $(type -P dnf || type -P yum) install -y python"
+
+peon_userdata: '{{ workspace }}/roles/peon_created/files/nodocker_userdata.yml'

@@ -1,0 +1,43 @@
+---
+
+cloud_environment:
+    USER_CONFIG_DIR: "{{ hostvars.exekutir.workspace }}"
+    SITE_CONFIG_DIR: "{{ hostvars.exekutir.workspace }}"
+    OS_CLIENT_CONFIG_FILE: "{{ hostvars.exekutir.workspace }}/clouds.yml"
+    HOME: "{{ hostvars.exekutir.workspace }}"
+    WORKSPACE: "{{ hostvars.exekutir.workspace }}"
+    OS_AUTH_URL: '{{ lookup("env", "OS_AUTH_URL") | default("",True) }}'
+    OS_TENANT_ID: '{{ lookup("env", "OS_TENANT_ID") | default("",True) }}'
+    OS_TENANT_NAME: '{{ lookup("env", "OS_TENANT_NAME") | default("",True) }}'
+    OS_PROJECT_NAME: '{{ lookup("env", "OS_PROJECT_NAME") | default("",True) }}'
+    OS_USERNAME: '{{ lookup("env", "OS_USERNAME") | default("",True) }}'
+    OS_PASSWORD: '{{ lookup("env", "OS_PASSWORD") | default("",True) }}'
+    OS_REGION_NAME: '{{ lookup("env", "OS_REGION_NAME") | default("",True) }}'
+    OS_CLOUD_NAME: '{{ lookup("env", "OS_CLOUD_NAME") | default("",True) }}'
+
+cloud_asserts:
+    - 'empty is defined'
+    - 'kommandir_name is defined'
+    - 'hostvars.exekutir.workspace is defined'
+    - 'hostvars.exekutir.kommandir_workspace is defined'
+    # extra_exekutir_setup should have taken care of this
+    - '"{{ hostvars.exekutir.workspace }}/clouds.yml" | is_file'
+    # Verify python-virtualenv is available
+    - '"/usr/bin/virtualenv" | is_file'
+    # Verify python2.7 is available
+    - '"/usr/bin/python2.7" | is_file'
+    # Verify redhat-rpm-config is available
+    - '"/usr/lib/rpm/macros.d" | is_dir'
+
+cloud_provisioning_command:
+    command: >
+        {{ hostvars.exekutir.kommandir_workspace }}/bin/openstack_discover_create.py \
+            {{ "--verbose" if adept_debug == True else "" }} \
+            {{ "--lockdir=" ~ global_lockdir if global_lockdir|default() not in empty else ""}} \
+            {{ kommandir_name }} \
+            ssh/exekutir_key.pub
+    chdir: "{{ hostvars.exekutir.workspace }}"
+
+cloud_destruction_command:
+    command: "{{ hostvars.exekutir.kommandir_workspace }}/bin/openstack_destroy.py {{ kommandir_name | trim() }}"
+    chdir: "{{ hostvars.exekutir.workspace }}"

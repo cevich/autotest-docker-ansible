@@ -1,0 +1,9 @@
+This job ({{ job_name }}) is intended to exercize
+a very minimal localhost-only runthrough of ADEPT.
+It should exercize the basic job-system and check
+critical variable-handling, then exit.  It's intended
+to be run by the test_exekutir_xn.sh unittest script
+as well as an automated ADEPT-ci job for testing
+code-changes.
+
+(src: {{ job_path }}/{{ job_docs_template_src }})

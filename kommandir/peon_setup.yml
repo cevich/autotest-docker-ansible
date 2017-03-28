@@ -1,77 +1,108 @@
 ---
 
-- hosts: peons:&{{ adept_job }}
-  gather_facts: False
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: peons:!nocloud
+  gather_facts: False  # Need peon_pre_raw_cmds run first
+  # Outside of debug-mode, run all peons as fast as possible
+  strategy: "{{ 'linear' if adept_debug else 'free' }}"
+  vars_files:
+      - kommandir_vars.yml
   pre_tasks:
-    - include: roles/autotested/tasks/all_fail.yml
-      vars:
-        failure_component: ADEPT
-        failure_message: Peon failed to complete setup.
-    - debug: msg="Verifying peons remain accessable for 10-second period"
-    # If it can do this 10 times, consider the peon up/functional
-    - include: roles/peon/tasks/try_sleep.yml
-      with_sequence: start=0 end=10
-    - name: Any low-level pre-setup raw commands are executed
-      raw: "{{ item }}"
+    - name: Some hosts may need python2 installed before anything else happens.
+      raw: "{{ item }}"  # raw commands don't require python
       args:
         executable: "/bin/bash"
-      with_items: '{{ pre_raw_cmds | default([]) }}'
+      register: result
+      with_items: '{{ peon_pre_raw_cmds | default([]) }}'
+    - name: Peon's peon_pre_raw_cmds results are displayed
+      debug:
+          var: "item.stdout_lines"
+      with_items: "{{ result.results }}"
+      when: adept_debug
     - setup:
-  roles:
+        gather_subset: []
+  roles: # N/B: failed_peon_junit role applied via role dependencies
+    - common
+    - peon_common
+
+      # Some roles should only ever be applied once
+    - role: touchstone
+      touch_touchstone: False
+
+    - role: rendered
+      when: rendered_templates | default() not in empty
+
     - role: subscribed
-      when: rhsm is defined and
+      when: not hostvars[inventory_hostname].stone_touched and
+            rhsm is defined and
             "subscribed" in group_names and
-            rhsm.username is defined and rhsm.username != [] and
-            rhsm.password is defined and rhsm.password != []
+            rhsm.username | default() not in empty and
+            rhsm.password | default() not in empty
+
+    - role: rawhide
+      when: not hostvars[inventory_hostname].stone_touched and
+            'fedora' in group_names and 'rawhide' in group_names
 
     - role: partitioned
-      when: disk_device is defined and disk_device != '' and
-            parted_cmds is defined and parted_cmds != ''
+      when: not hostvars[inventory_hostname].stone_touched and
+            disk_device | default() not in empty and
+            parted_cmds | default() not in empty
 
     - role: rebooted
       # Workaround "feature" of role only being applied once per play
-      run_more_than_once: "foo"
+      reboot_context: "beginning"
       when: needs_reboot == True
 
     - role: yumrepos
-      when: disable_all_rh_repos is defined and
-            yum_repos is defined and yum_repos != []
+      when: disable_all_rh_repos | default(False) in [True,False] or
+            enable_rh_repos | default() not in empty or
+            yum_repos | default() not in empty
 
     - role: lvm
-      when: lvg_ops is defined or lvol_ops is defined
+      when: lvg_ops | default() not in empty or
+            lvol_ops | default() not in empty
 
     - role: swap_enabled
-      when: swap_device is defined
+      when: swap_device | default() not in empty
 
     - role: installed
-      when: installed_rpms is defined and installed_rpms != []
+      when: not is_atomic and
+            install_rpms | default() not in empty
 
-    - role: updated
-      when: '"updated" in group_names'
+    - role: atomic_rebase
+      when: is_atomic and
+            ostree_remote | default() not in empty and
+            ostree_remote.name | default() not in empty and
+            ostree_remote.url | default() not in empty and
+            ostree_remote.spec | default() not in empty
 
     - role: atomic_upgrade
-      # common role defines is_atomic
-      when: is_atomic is defined and is_atomic == True and
-            "atomic_upgrade" in group_names
+      when: is_atomic and
+            ostree_remote | default() in empty and
+            'updated' in group_names
 
     - role: rebooted
-      run_more_than_once: "bar"
+      reboot_context: "middle"
       when: needs_reboot == True
 
-    - peon
-
-    - sysconfig_docker
+    - role: sysconfig_docker
+      when: "ansible_distribution != 'Fedora'"
 
     - role: liverestore_enabled
       when: '"liverestore" in group_names'
 
     - role: docker-storage-setup
-      when: sysconfig_dss_lines | default([]) != []
+      when: not hostvars[inventory_hostname].stone_touched and
+            sysconfig_dss_lines | default([]) != []
 
     - selinux_enforcing
 
     - services
 
     - role: rebooted
-      run_more_than_once: "baz"
+      reboot_context: "end"
       when: needs_reboot == True
+
+    - role: autotested
+      when: '"autotested" in group_names and docker_autotest is defined'

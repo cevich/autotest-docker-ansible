@@ -5,3 +5,4 @@
 *.pyo
 *.retry
 docs/build
+legacy_group_vars

@@ -1,8 +1,6 @@
 ---
 
-use_dnf: True
-
-installed_rpms:
+install_rpms:
     - docker
     - atomic
     - docker-selinux

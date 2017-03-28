@@ -1,55 +1,49 @@
 ---
 
 - hosts: exekutir
-  # Assume inventory is incomplete (kommandir is unreachable)
-  gather_facts: False
-  # Guarantee immediate non-zero exit, do not continue w/ other hosts
-  any_errors_fatal: true
+  gather_subset: 'network'
+  vars_files:
+      - exekutir_vars.yml
   pre_tasks:
-    - name: Gather exekutir facts exclusive of other inventory hosts
+    - name: Gather exekutir facs exclusive of other inventory hosts
       setup:
   roles:
     - common
-    - ansible_versioned
-    - compatible_ansible
-    - exekutir_workspace_setup
-    - role: inventory_updated
-      inventory_hostnames:
-        - exekutir
+    - role: ansible_versioned
+      when: "adept_context == 'setup'"
+    - role: compatible_ansible
+      when: "adept_context == 'setup'"
+    - role: exekutir_workspace_setup
+      when: "adept_context == 'setup'"
 
-- hosts: kommandir
-  # Inventory may still be incomplete
+# Remote kommandir
+- hosts: kommandir:!nocloud
+  # Inventory is incomplete
   gather_facts: False
-  # Ensure exclusive lock is released, even on role failure
-  force_handlers: True
-  # Guarantee immediate non-zero exit, do not continue w/ other hosts
-  any_errors_fatal: true
+  vars_files:  # Still running from exekutir
+      - exekutir_vars.yml
   roles:
     - common
-    - role: exekutir_lock
-      lock_type: "exclusive"
     - kommandir_discovered
-    - role: inventory_updated
-      inventory_hostnames:
-        - kommandir
-        - exekutir
     - kommandir_up
-    - role: kommandir_installed
-      when: "'nocloud' not in hostvars.kommandir.group_names"
+    - role: touchstone
+      touch_touchstone: False
+    - role: installed
+      when: not hostvars.kommandir.stone_touched
     - role: kommandir_setup
-      when: "'nocloud' not in hostvars.kommandir.group_names"
-  # Exclusive lock is released by handler
+      when: not hostvars.kommandir.stone_touched
+    - role: touchstone
+      touch_touchstone: True
+      when: not hostvars.kommandir.stone_touched
 
+# All kommandir's
 - hosts: kommandir
-  # Guarantee immediate non-zero exit, do not continue w/ other hosts
-  any_errors_fatal: true
+  gather_subset: 'network'
+  vars_files:  # Still running from exekutir
+      - exekutir_vars.yml
   roles:
     - common
-    - role: exekutir_lock
-      lock_type: "shared"
-      lock_release: False
-    # One-time setup, then synchronizes from exekutir -> kommandir
-    - kommandir_workspace_setup
-    # In case job.xn fails, local copy matches remote
-    - kommandir_to_exekutir_sync
-  # Shared lock is maintained
+    - kommandir_workspace_update
+    # Make sure local copy matches remote
+    - role: kommandir_to_exekutir_sync
+      when: '"nocloud" not in group_names'

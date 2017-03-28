@@ -1,0 +1,133 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - 'inventory_hostname == "kommandir"'
+        - 'uuid is defined'
+        - 'kommandir_workspace is defined'
+        - 'hostvars.exekutir.workspace is defined'
+        - 'no_log_synchronize is defined'
+        - 'workspace_rsync_excludes | default() not in empty'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["uuid","kommandir_workspace","group_names","hostvars.exekutir.workspace","ansible_user","ansible_ssh_user","no_log_synchronize"]
+
+- name: Root access is required for non-nocloud kommandirs
+  assert:
+    that:
+        - 'ansible_user is undefined or ansible_user == "root"'
+        - 'ansible_ssh_user is undefined or ansible_ssh_user == "root"'
+        - 'ansible_user is defined or ansible_ssh_user is defined'
+  when: "'nocloud' not in group_names"
+
+# User's home dir as remote workspace prevents clashes between concurrent jobs
+# and allows job.xn + playbooks to not run with root access.
+- name: A user named uuid exists on remote kommandir to seperate concurrent run's data.
+  user:
+    name: "{{ uuid }}"
+    state: present
+  when: "'nocloud' not in group_names"
+
+- name: Kommandir's extra_kommandir_setup command is executed
+  shell: "{{ extra_kommandir_setup.command }}"
+  args:
+    chdir: "{{ extra_kommandir_setup.chdir | default(omit) }}"
+    creates: "{{ extra_kommandir_setup.creates | default(omit) }}"
+    executable: "{{ extra_kommandir_setup.executable | default(omit) }}"
+    removes: "{{ extra_kommandir_setup.removes | default(omit) }}"
+    warn: False
+  register: result
+  delegate_to:  "{{ extra_kommandir_setup.delegate | default('exekutir') }}"
+  when: extra_kommandir_setup is defined and
+        extra_kommandir_setup.command is defined
+
+- name: Display Kommandir's extra_kommandir_setup command results
+  debug:
+    var: result
+  when: adept_debug
+
+- name: Remote Kommandir's workspace is destructivly synchronized from exekutir's copy
+  synchronize:
+    copy_links: true  # Relative links wouldn't work afterwards
+    # Don't trust local uids/gids are correct
+    group: False
+    owner: False
+    rsync_opts: "{{ workspace_rsync_excludes }}"
+    delete: true  # Exekutir's copy is always authorative
+    checksum: True  # Don't trust remote clock
+    # From Exekutir
+    src: "{{ hostvars.exekutir.kommandir_workspace }}/"
+    # To Kommandir
+    dest: "{{ kommandir_workspace }}"
+  no_log: '{{ no_log_synchronize }}'
+  when: "'nocloud' not in group_names"
+
+- name: The dot-ssh directory is absent after sync. w/ copy_links True
+  file:
+    path: "{{ kommandir_workspace }}/.ssh"
+    state: absent
+
+- name: The dot-ssh directory is a symlink to the ssh directory
+  file:
+    dest: "{{ kommandir_workspace }}/.ssh"
+    src: "{{ kommandir_workspace }}/ssh"
+    state: link
+
+- name: The ssh directory has correct permissions
+  file:
+    path: "{{ kommandir_workspace }}/ssh"
+    mode: "0700"
+    setype: "ssh_home_t"
+    state: directory
+
+- name: The ssh directory contents are known
+  find:
+    paths: "{{ kommandir_workspace }}/ssh/"
+  register: result
+
+- name: The ssh directory contents have correct permissions
+  file:
+    path: "{{ item.path }}"
+    mode: "0600"
+    state: touch
+    setype: "ssh_home_t"
+  with_items: "{{ result.files }}"
+
+- name: The workspace (home directory) has correct permissions
+  file:
+    path: "{{ kommandir_workspace }}"
+    mode: "0700"
+    state: directory
+
+- name: Kommandir's workspace/cache is a directory
+  file:
+    path: "{{ kommandir_workspace }}/cache"
+    follow: True
+    state: directory
+  register: result
+
+- name: Kommandir's cache content checked out from git when directory created
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ kommandir_workspace }}/cache/{{ item.cachepath }}"
+    # Shallow clone is much faster when specific branch/tag/version is _not_ used.
+    # Otherwise, if a version is specified, then the full history-depth is likely
+    # required to find it.
+    depth: "{{ omit if item.version is defined else item.depth | default(2) }}"
+    # HEAD is the default if not specified
+    version: "{{ item.version | default(omit) }}"
+    recursive: "{{ item.recursive | default(False) }}"
+  when: result | changed and
+        git_cache_args is defined and git_cache_args not in [None,"",[],{}]
+  with_items: '{{ git_cache_args }}'
+
+- name: Remote Kommandir's workspace files have correct ownership
+  command: "chown -R {{ uuid }}.{{ uuid }} {{ kommandir_workspace }}"
+  when: "'nocloud' not in group_names"

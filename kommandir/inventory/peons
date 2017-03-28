@@ -1,0 +1,21 @@
+
+# Predefined peons group for use by default job.  Override in
+# job_path contents as needed.  All peons listed in this group
+# will be provisioned and dynamicly added for setup context.
+
+[peons]
+
+rhel7-3-docker
+rhel7-3-docker-latest
+
+rhel7-2-upgraded-docker
+rhel7-2-upgraded-docker-latest
+
+rhelatomic7-3-docker
+rhelatomic7-3-docker-latest
+
+rhelatomic7-2-upgraded-docker
+rhelatomic7-2-upgraded-docker-latest
+
+fedora-25-docker-latest
+fedoratomic-25-docker-latest

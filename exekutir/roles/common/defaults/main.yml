@@ -1,7 +1,17 @@
 ---
 
-################################################################
-# N/B: This may be running on an old (2.1)  version of ansible #
-################################################################
+# When unspecified, these values are used as defaults in the common role:
 
-cloud_type: 'nocloud'
+# Default groups for exekutir to join
+default_exekutir_groups:
+    - nocloud
+
+# Default groups for kommandir to join if hostvars.exekutir.kommandir_groups undefined
+default_kommandir_groups:
+    - nocloud
+
+# Name to prefix default_kommandir_name, e.g. for testing kommandir setups
+kommandir_name_prefix:
+
+# Default cloud name (not inventory name) to use for kommandir.
+default_kommandir_name: 'kommandir'

@@ -1,11 +1,7 @@
-################################################################
-# N/B: This may be running on an old (2.1) version of ansible #
-################################################################
-
 # vim-syntax: ini
 
-# N/B: This file may be overwritten when job_path is syncd to
-# kommandir's kommandir_workspace
+# N/B: Do not add any peons to this file, they will be added dynamicly
+#      based on membership in the 'peons' group.
 
 # This is always localhost, name defined for clarity in playbooks.
 # It will be re-added by kommandir_workspace_setup role if it's missing.

@@ -1,8 +1,0 @@
----
-
-# setup.yml play verifies this value were overwritten 
-# during workspace setup because test_exekutir.xn dropped
-# $workspace/variables.yml which should override this one
-uuid: THE_WRONG_VALUE
-cloud_type: SUPERCLOUD
-some_magic_variable_for_testing: ANOTHER_WRONG_VALUE

@@ -1,0 +1,19 @@
+---
+
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: kommandir
+  # Can't assume all hosts are reachable, only setup Kommandir
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  pre_tasks:
+    - name: Gather kommandir facs exclusive of other inventory hosts
+      setup:
+        gather_subset: 'network'
+  roles:
+    - common
+    - role: ansible_versioned
+      when: 'adept_context == "setup"'
+    - role: compatible_ansible
+      when: 'adept_context == "setup"'

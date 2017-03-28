@@ -1,0 +1,28 @@
+[Control]
+
+# Subtests/sub-subtest names to remove from include (above)
+# in addition to any specified by --args x=<csv> sub-option.
+# e.g. "docker_cli/run,docker_cli/attach/no_stdin"
+exclude = example,subexample,pretest_example,intratest_example,
+          posttest_example,
+          docker_cli/run_volumes,
+{% if is_atomic %}
+          {# Atomic host does not have git #}
+          docker_cli/build/git_path,
+{% endif %}
+{% if not is_enterprise %}
+          {# We never test the RHEL base-image on Fedora #}
+          redhat/rhel_push_plugin,
+          redhat/packaging,
+          puller
+{% endif %}
+
+# Subtests/Sub-subtest to consider for inclusion before
+# consulting include/exclude (above).
+subthings = {{ job_subthings }}
+
+[Bugzilla]
+
+# Authentication options if required
+username = {{ private_bugzilla_username | default("") }}
+password = {{ private_bugzilla_password | default("") }}

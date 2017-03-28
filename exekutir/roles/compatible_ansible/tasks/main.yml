@@ -6,5 +6,6 @@
 
 - assert:
     that:
+        - 'empty is defined'
         - "compatible_ansible_minimum | default() in empty or ansible_version.string | version_compare(compatible_ansible_minimum, '>=')"
         - "compatible_ansible_maximum | default() in empty or ansible_version.string | version_compare(compatible_ansible_maximum, '<')"

@@ -1,0 +1,6 @@
+This job ({{ job_name }}) utilizes the default
+default configuration with a limited set of peons
+for quickly testing changes to Docker Autotest
+with a full compliment of it's subtests.
+
+(src: {{ job_path }}/{{ job_docs_template_src }})

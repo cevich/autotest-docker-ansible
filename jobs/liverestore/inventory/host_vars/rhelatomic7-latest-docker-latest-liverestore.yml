@@ -1,0 +1,18 @@
+---
+
+ansible_shell_type: sh
+
+peon_groups:
+    - openstack
+    - rhelatomic
+    - subscribed
+    - updated
+    - docker-latest
+    - autotested
+    - liverestore
+
+peon_image: 'rhel-atomic-cloud-7.3-released-latest'
+
+peon_flavor: 'm1.medium'
+
+peon_userdata: '{{ workspace }}/roles/peon_created/files/nodocker_userdata.yml'

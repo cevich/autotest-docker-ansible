@@ -3,6 +3,18 @@
 # N/B: This file can be overwritten by a copy from job_path.
 
 - hosts: kommandir
-  tasks:
-    - debug:
-        msg: "This is the playbook running on kommandir for the {{ adept_context }} context"
+  # Can't assume all hosts are reachable, only setup Kommandir
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  pre_tasks:
+    - name: Gather kommandir facs exclusive of other inventory hosts
+      setup:
+        gather_subset: 'network'
+  roles:
+    - common
+    - ansible_versioned
+    - compatible_ansible
+
+- include: peon_creation.yml
+- include: peon_setup.yml

@@ -1,7 +1,7 @@
 {{ "ssh" ~
    " -o UserKnownHostsFile=/dev/null" ~
    " -o StrictHostKeyChecking=no" ~
-   " -o IdentityFile=" ~ (hostvars.kommandir.workspace ~ "/ssh/kommandir_key" | quote) ~
+   " -o IdentityFile=" ~ ansible_private_key_file ~
    " -o KbdInteractiveAuthentication=no" ~
    " -o PreferredAuthentications=publickey" ~
    " -o PasswordAuthentication=no" ~

@@ -1,0 +1,11 @@
+---
+
+# Enables running of additional 'debug' tasks
+adept_debug: False
+
+# Indicates whether or not to destroy any created peons.
+cleanup: True
+
+# The synchronize module produces a crazy amount of output.
+# Disable all of it by default
+no_log_synchronize: True

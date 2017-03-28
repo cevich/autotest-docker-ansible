@@ -1,1 +1,52 @@
-setup.yml
+---
+
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: kommandir
+  # Can't assume all hosts are reachable
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  pre_tasks:
+    - name: Gather kommandir facs exclusive of other inventory hosts
+      setup:
+        gather_subset: 'network'
+  roles:
+    # Needed to group/add all peons
+    - common
+
+- hosts: all  # Include kommandir, so if all peons fail, clear_host_errors still works
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  roles:
+    - role: unsubscribed
+      when: cleanup and
+            inventory_hostname != "kommandir" and
+            "subscribed" in group_names and
+            "nocloud" not in group_names
+  post_tasks:
+    - meta: clear_host_errors
+
+- hosts: peons:!nocloud
+  # Can't assume hosts are reachable
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  roles:
+    - common
+    - peon_common
+    - role: peon_destroyed
+      when: cleanup | default(True)
+
+- hosts: kommandir
+  # Can't assume all hosts are reachable
+  gather_facts: False
+  vars_files:
+      - kommandir_vars.yml
+  pre_tasks:
+    - name: Gather kommandir facs exclusive of other inventory hosts
+      setup:
+        gather_subset: 'network'
+  roles:
+    - workspace_cleanup

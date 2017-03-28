@@ -1,0 +1,4 @@
+---
+
+# The number of days old (ctime) when files in /home should be purged
+purge_home_days: 2

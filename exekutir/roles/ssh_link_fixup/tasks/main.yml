@@ -1,0 +1,46 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# This role is needed because during kommandir <-> exekutir workspace
+# synchronization, copy_links: true is used to avoid any relative symlink
+# problems.  The side-effect is, it will cause duplicate .ssh and ssh
+# directories to be produced on the receiving side.  This role makes sure
+# that the .ssh directory is always a symlink to the ssh directory - maintaining
+# consistent behavior across all of ADEPT transition files and playbooks.
+
+- assert:
+    that:
+        - 'ssh_link_fixup_basedir is defined'
+        - 'ssh_link_fixup_basedir not in [None,"",[],{}]'
+
+- name: Key variables are displayed
+  debug:
+    var: "ssh_link_fixup_basedir"
+  when: adept_debug
+
+- name: The dot-ssh directory is absent
+  file:
+    path: "{{ ssh_link_fixup_basedir }}/.ssh"
+    state: absent
+
+- name: The ssh directory is present
+  file:
+    path: "{{ ssh_link_fixup_basedir }}/ssh"
+    state: directory
+    mode: "0770"
+
+- name: The dot-ssh directory is a symlink to the ssh directory
+  file:
+    src: "ssh"
+    dest: "{{ ssh_link_fixup_basedir }}/.ssh"
+    state: link
+
+- name: The ssh directory's files have correct permissions
+  file:
+    path: "{{ item }}"
+    mode: "0600"
+  with_fileglob:
+    - "{{ ssh_link_fixup_basedir }}/ssh/*"

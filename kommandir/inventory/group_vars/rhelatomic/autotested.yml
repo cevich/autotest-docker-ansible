@@ -1,11 +1,5 @@
 ---
 
-docker_autotest_templates:
-    - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
-      dest: "{{ autotest_docker_path }}/config_custom/subtests.ini"
-    - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
-      dest: "{{ autotest_docker_path }}/config_custom/control.ini"
-
 docker_autotest:
     test_image:
         host: "registry.access.redhat.com"

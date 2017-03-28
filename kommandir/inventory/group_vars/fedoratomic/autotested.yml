@@ -10,10 +10,10 @@ docker_autotest:
     test_image:
         host: "localhost"
         user: ""
-        name: "fedora_python"
+        name: "fedora_test_image"
         tag: "latest"
     preserve_fqins:
-        - "fedora_python:latest"
+        - "fedora_test_image:latest"
         - "docker.io/fedora:latest"
     preserve_cnames: []
     execute: true

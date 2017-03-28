@@ -1,0 +1,7 @@
+This job ({{ job_name }}) utilizes the default
+setup/configuration for ADEPT to exercise
+a nearly complete set of all peons and
+tests.  The only exclusions are dedicated
+to exercising specialized setups and features.
+
+(src: {{ job_path }}/{{ job_docs_template_src }})

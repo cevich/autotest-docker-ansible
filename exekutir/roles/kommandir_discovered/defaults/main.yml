@@ -4,5 +4,5 @@
 # N/B: This may be running on an old (2.1)  version of ansible #
 ################################################################
 
-# Any environment variables needed for cloud_provisioning_command
+# Verify all inputs/state is ready for cloud_discovery_command
 cloud_environment: {}

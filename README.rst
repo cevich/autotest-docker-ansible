@@ -21,6 +21,7 @@ Openstack support:
 -------------------
 
 * redhat-rpm-config (rpm)
+* gcc
 * python-virtualenv or python2-virtualenv (EPEL rpm)
 * `Openstack client config credentials`_
 

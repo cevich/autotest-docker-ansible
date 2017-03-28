@@ -1,1 +1,11 @@
-setup.yml
+---
+
+# N/B: This file can be overwritten by a copy from job_path.
+
+- hosts: peons:autotested
+  vars_files:
+      - kommandir_vars.yml
+  roles:
+    - common
+    - peon_common
+    - autotested

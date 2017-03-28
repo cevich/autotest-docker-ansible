@@ -122,8 +122,8 @@ ansible_become: False
 ansible_connection: ssh
 """
 
-WORKSPACE_LOCKFILE_PREFIX = '.adept_workspace'
-GLOBAL_LOCKFILE_PREFIX = '.adept_global'
+WORKSPACE_LOCKFILE_PREFIX = '.adept_job_workspace'
+GLOBAL_LOCKFILE_PREFIX = '.adept_global_floatingip'
 
 class Singleton(object):
     """
@@ -408,6 +408,15 @@ class OpenstackREST(Singleton):
         except (KeyError, IndexError):
             return None
 
+    def create_floating_ip(self, net_id):
+        """
+        Create, and cache details about a new floating ip routed to net_id"""
+        floatingip = dict(floating_network_id=net_id)
+        self.service_request('network', '/v2.0/floatingips',
+                             "floatingip", method='post',
+                             post_json=dict(floatingip=floatingip))
+        return self.response_json['floating_ip_address']
+
     def attachments(self, name=None, uuid=None):
         """
         Cache details about server, return list of attached volume IDs
@@ -474,6 +483,12 @@ class TimeoutAction(object):
             time.sleep(self.sleep)
             result = self.am_done(*self._args, **self._dargs)
         return result
+
+    def timeout_remaining(self):
+        """Return the amount of time in seconds remaining before timeout"""
+        if self.time_out_at is None:
+            raise ValueError("%s() gas not been called" % self.__class__.__name__)
+        return float(self.time_out_at - time.time())
 
     def am_done(self, *args, **dargs):
         """
@@ -636,33 +651,35 @@ class TimeoutAssignFloatingIP(TimeoutAction):
 
     def am_done(self, server_id, net_name, net_id):
         """Return assigned floating IP for server or None if unassigned"""
+        # Assigned IPs can be stolen if two processes issue the assign-action
+        # for the same IP at close to the same time.  This is only
+        # only partly mitigated by locking between processes of this job.
+        # For complete protection, all provisioners, across all jobs should use
+        # a global file-lock, provided for here by --lockdir.  If unspecified
+        # only a job-local lock is used.
         try:
-            ip_addr = self.os_rest.server_ip(uuid=server_id, net_name=net_name)
-            logging.info("    IP %s assigned", ip_addr)
-            return ip_addr
+            with OpenstackLock().timeout_acquire_read(self.timeout_remaining()) as osl:
+                ip_addr = self.os_rest.server_ip(uuid=server_id, net_name=net_name)
+                logging.info("    IP %s assigned", ip_addr)
+                return ip_addr
         except (ValueError, IndexError, KeyError):
-            floating_ip = self.os_rest.floating_ip()  # Get dis-used IP
-            if not floating_ip:
-                logging.info("    creating new floating IP to %s", net_name)
-                floatingip = dict(floating_network_id=net_id)
-
-                self.os_rest.service_request('network', '/v2.0/floatingips',
-                                             "floatingip", method='post',
-                                             post_json=dict(floatingip=floatingip))
-                floating_ip = self.os_rest.response_json['floating_ip_address']
-
-            logging.info("    Assigning %s to server id %s",
-                         floating_ip, server_id)
-
-            addfloatingip = dict(address=floating_ip)
-            try:
-                self.os_rest.compute_request('/servers/%s/action' % server_id,
-                                             unwrap=None, method='post',
-                                             post_json=dict(addFloatingIp=addfloatingip))
-            except ValueError:
-                logging.info("    Assignment failed")
-
-            return None  # Assignment may have failed, another server snagged it.
+            with OpenstackLock().timeout_acquire_write(self.timeout_remaining()) as osl:
+                if osl is None:
+                    raise self.timeout_exception("Timeout acquiring lock")
+                floating_ip = self.os_rest.floating_ip()  # Get dis-used IP
+                if not floating_ip:  # Didn't get one, must create new
+                    logging.info("    creating new floating IP to %s", net_name)
+                    floating_ip = self.os_rest.create_floating_ip(net_id)
+                logging.info("    Assigning %s to server id %s",
+                             floating_ip, server_id)
+                addfloatingip = dict(address=floating_ip)
+                try:
+                    self.os_rest.compute_request('/servers/%s/action' % server_id,
+                                                 unwrap=None, method='post',
+                                                 post_json=dict(addFloatingIp=addfloatingip))
+                except ValueError:
+                    logging.info("    Assignment failed")
+                return None  # Check if ip successfully assigned
 
 
 class TimeoutAttachVolume(TimeoutAction):
@@ -902,14 +919,8 @@ def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
             TimeoutAttachVolume(name, server_id, int(size))()
 
         if not private:
-            # This can steal a floating IP out from another server
-            # if addFloatingIp POST happens concurrently.  It is
-            # only partly mitigated by locking between processes of this job.
-            with OpenstackLock().timeout_acquire_write(TimeoutAction.timeout) as oslock:
-                if oslock is None:
-                    raise ValueError("Timeout acquiring lock")
-                logging.info("Attempting to assign floating ip on network %s", router_name)
-                TimeoutAssignFloatingIP(server_id, router_name)()
+            logging.info("Attempting to assign floating ip on network %s", router_name)
+            TimeoutAssignFloatingIP(server_id, router_name)()
 
         discover(name=name, uuid=server_id, router_name=router_name, private=private)
 
@@ -1130,6 +1141,7 @@ def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
     with lockfile.timeout_acquire_write(TimeoutAction.timeout) as vlock:
         if vlock is None:
             raise ValueError("Timeout acquiring lock")
+        logging.debug("Lockfile %s", vlock.name)
         try:
             if os.path.isdir(venvdir):
                 logging.info("Found existing virtual environment")
@@ -1167,9 +1179,10 @@ if __name__ == '__main__':
         logging.error(EPILOG)
         sys.exit(2)
     TimeoutAction.timeout = _dargs['timeout']
+    # initialize default values for all locks
     Flock.def_path = workspace
     Flock.def_prefix = WORKSPACE_LOCKFILE_PREFIX
-    # initialize singleton
+    # initialize floating IP singleton
     if 'lockdir' in _dargs:
         OpenstackLock(os.path.join(_dargs['lockdir'],
                                    '%s.lock' % WORKSPACE_LOCKFILE_PREFIX))
@@ -1211,8 +1224,10 @@ if __name__ == '__main__':
     osc = os_client_config.OpenStackConfig()
     clouds = osc.get_cloud_names()
     os_cloud_name = original_environ.get('OS_CLOUD_NAME', osc.get_cloud_names()[0])
-
-    logging.info("Using cloud '%s' from %s", os_cloud_name, osc.config_filename)
+    if os_cloud_name:
+        logging.info("Using cloud '%s' from %s", os_cloud_name, osc.config_filename)
+    else:
+        os_cloud_name = 'default'
     cloud = osc.get_one_cloud(os_cloud_name)
     del os_cloud_name  # keep global namespace clean
     service_names = cloud.get_services()

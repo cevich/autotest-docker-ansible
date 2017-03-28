@@ -7,13 +7,10 @@
 - assert:
     that:
         - 'inventory_hostname == "kommandir"'
-        - 'not job_xn_done'
         - "'nocloud' not in group_names"
+        - 'purge_home_days | default(0) | int > 0'
 
-
-# TODO: Additional kommandir setup, while we have root access?
-
-# FIXME: format/mount /home
-
-- name: Clean out any home directory files older than 7 days
-  command: /bin/find /home -atime +5 -exec rm -f {} +
+- name: Cron job to clean out old home directory files
+  cron:
+    special_time: daily
+    job: /bin/find /home -atime +{{ purge_home_days|int() }} -exec rm -f {} +

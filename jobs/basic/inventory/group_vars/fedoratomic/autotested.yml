@@ -1,0 +1,3 @@
+---
+
+control_template_path: "{{ workspace }}/templates/control.ini.j2"

@@ -8,7 +8,9 @@
 - block:
 
     - name: Execute Docker autotest
-      shell: "export AUTOTEST_PATH={{ autotest_dest_dir }} && $AUTOTEST_PATH/client/autotest-local {{ autotest_docker_path }}/control"
+      shell: "$AUTOTEST_PATH/client/autotest-local {{ autotest_docker_path }}/control &> /dev/null"
+      environment:
+        AUTOTEST_PATH: "{{ autotest_dest_dir }}"
       args:
         chdir: "{{ autotest_docker_path }}"
       register: autotest_execution

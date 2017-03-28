@@ -1,0 +1,17 @@
+---
+
+ansible_shell_type: sh
+
+peon_groups:
+    - openstack
+    - fedoratomic
+    - updated
+    - docker
+    - autotested
+    - liverestore
+
+peon_image: 'Fedora-Atomic-25'
+
+peon_flavor: 'm1.medium'
+
+peon_userdata: '{{ workspace }}/roles/peon_created/files/nodocker_userdata.yml'

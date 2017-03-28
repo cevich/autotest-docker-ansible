@@ -47,7 +47,7 @@ cmd = 'yum --disablerepo="*" --enablerepo="rhel-7-server-rpms" --assumeyes updat
 subsubtests = builder,puller
 extra_fqins_csv =
 # Make sure the default test image gets built
-build_name = localhost/fedora_python:latest
+build_name = localhost/fedora_test_image:latest
 # This only works with http-based URLs on Atomic (not git)
 build_dockerfile = https://github.com/autotest/autotest-docker/raw/master/fedora_test_image.tar.gz
 build_opts_csv = --pull,--force-rm

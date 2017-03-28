@@ -1,0 +1,7 @@
+This job ({{ job_name }}) is intended to exercise
+a subset of tests on a subset of peons to verify
+basic ADEPT and Docker Autotest functionality.
+It should execute relatively fast and not consume
+many resources.
+
+(src: {{ job_path }}/{{ job_docs_template_src }})

@@ -6,8 +6,8 @@
         - 'ansible_distribution in ["RedHat","Fedora","CentOS"]'
         - >
             disable_all_rh_repos in [True,False] or
-            enable_rh_repos | default() not in empty or
-            yum_repos | default() not in empty
+            enable_rh_repos | default() not in [None,'',{}] or
+            yum_repos | default() not in [None,'',{}]
 
 # There are situations where default repositories are broken
 - name: All RH repositories are disabled in subscription manager

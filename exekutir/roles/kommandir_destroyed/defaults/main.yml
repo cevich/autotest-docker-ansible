@@ -4,8 +4,20 @@
 # N/B: This may be running on an old (2.1)  version of ansible #
 ################################################################
 
+# Verify all inputs/state is ready for cloud_destruction_command
+cloud_asserts: []
+
 # Any environment variables needed for cloud_destruction_command
 cloud_environment: {}
 
-# This may contain any argument supported by the 'shell' module
-cloud_destruction_command: {}
+# This forces kommandir destruction no matter how old it is
+stonith: False
+
+# Days from kommandir creation time that triggers it's destruction
+too_old: 3
+
+# Path to file/dir on kommandir with ctime stamp indicating creation-time
+epoch_path: "/var/lib/cloud/instance/boot-finished"
+
+# When true, force destruction of kommandir, despite it's age
+stonith: True

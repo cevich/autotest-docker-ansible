@@ -6,58 +6,276 @@
 
 - assert:
     that:
+        - 'empty is defined'
         - 'inventory_hostname == "exekutir"'
+        - 'workspace_rsync_excludes | default() not in empty'
+        - 'adept_context == "setup"'
         - 'kommandir_workspace is defined'
-        - 'kommandir_workspace_dirty is defined'
-        - 'not job_xn_done'
         - 'workspace is defined'
-        - 'ANSIBLE_PRIVATE_KEY_FILE is defined'
+        - 'ansible_private_key_file is defined'
         - 'job_name is defined'
         - 'uuid is defined'
-
+        - 'adept_path is defined'
+        - 'no_log_synchronize is defined'
 
 - name: Key variables are displayed
   debug:
     var: "{{ item }}"
   when: adept_debug
-  with_items: ["kommandir_workspace","job_xn_done","kommandir_workspace_dirty","ANSIBLE_PRIVATE_KEY_FILE"]
+  with_items: ["kommandir_workspace","adept_path","ansible_private_key_file","no_log_synchronize"]
 
-- name: exekutir's kommandir_workspace directory exists
+- name: Exekutir's synchronization source directory exists for kommandir's workspace
   file:
     path: "{{ kommandir_workspace }}"
     state: directory
-  when: kommandir_workspace_dirty
 
-- name: exekutir's kommandir_workspace/ssh directory exists if kommandir_workspace_dirty
-  file:
-    path: "{{ kommandir_workspace }}/ssh"
-    mode: "0700"
-    state: directory
-  when: kommandir_workspace_dirty
+- name: Kommandir's playbooks, inventory, and data are copied to kommandir's workspace source
+  synchronize:  # Lots of files, so this is WAY faster than copy module
+    src: "{{ adept_path }}/kommandir/"
+    dest: "{{ kommandir_workspace }}"
+    copy_links: true  # Relative links wouldn't work afterwards
+    delete: true  # Exekutir's copy is always authorative
+    checksum: True  # Don't trust remote clock
+    rsync_opts: "{{ workspace_rsync_excludes }}"
+  no_log: '{{ no_log_synchronize }}'
 
-- name: The kommandir_workspace/.ssh directory symlinked to ssh if kommandir_workspace_dirty
+- name: Exekutir's results directory points at Kommandir's
   file:
-    src: "{{ kommandir_workspace }}/ssh"
-    dest: "{{ kommandir_workspace }}/.ssh"
+    # Use a relative link, in case base directory changes
+    src: '{{ kommandir_workspace | basename }}/results'
+    dest: '{{ workspace }}/results'
+    force: True
     state: link
-  when: kommandir_workspace_dirty
 
-- name: Future kommandirs and peons protected by new ssh key if kommandir_workspace_dirty
+- name: Kommandir needs adept.py to execute it's job.xn
+  copy:
+    src: "{{ adept_path }}/adept.py"
+    dest: '{{ kommandir_workspace }}'
+    mode: '0775'
+
+- name: All *.yml and *.xn files in kommandir's workspace are copied with a default_ prefix
+  copy:
+    remote_src: True
+    src: "{{ item }}"
+    dest: "{{ item | dirname }}/default_{{ item | basename }}"
+  with_fileglob:
+    - "{{ kommandir_workspace }}/*.yml"
+    - "{{ kommandir_workspace }}/*.xn"
+
+- name: Contents of job_path overwrite files in kommandir's workspace.
+  synchronize:  # Lots of files, so this is WAY faster than copy module
+    src: "{{ job_path }}/"
+    dest: '{{ kommandir_workspace }}'
+    copy_links: true  # Relative links wouldn't work afterwards
+    rsync_opts: "{{ workspace_rsync_excludes }}"
+  no_log: '{{ no_log_synchronize }}'
+
+- name: Exekutir's extra_exekutir_setup command is executed
+  shell: "{{ extra_exekutir_setup.command }}"
+  args:
+    chdir: "{{ extra_exekutir_setup.chdir | default(omit) }}"
+    creates: "{{ extra_exekutir_setup.creates | default(omit) }}"
+    executable: "{{ extra_exekutir_setup.executable | default(omit) }}"
+    removes: "{{ extra_exekutir_setup.removes | default(omit) }}"
+    warn: False
+  register: result
+  when: extra_exekutir_setup is defined and
+        extra_exekutir_setup.command is defined
+
+- name: Result of Exekutir's extra_exekutir_setup command is displayed
+  debug:
+    var: "result"
+  when: adept_debug
+
+- debug:
+    msg: "Exekutir protects kommandir by securing critical items"
+
+- name: Exekutir's exekutir_vars.yml file is marked as ansible managed
+  lineinfile:
+    dest: "{{ workspace }}/exekutir_vars.yml"
+    insertbefore: BOF  # Last defined key wins
+    line: "##### ANSIBLE MANAGED FILE ({{ role_path }})"
+    create: True  # Guarantee from this point firward, it always exists
+
+- name: Exekutir's exekutir_vars.yml file hard-codes important runtime values
+  lineinfile:
+    dest: "{{ workspace }}/exekutir_vars.yml"
+    regexp: '^{{ item.key }}:.*'
+    line: '{{ item.key }}: {{ item.value }}'
+  with_dict:
+    uuid: "{{ uuid }}"
+    job_path: "{{ job_path }}"
+    job_name: "{{ job_name }}"
+    adept_debug: "{{ adept_debug }}"
+    cleanup: "{{ cleanup | default(True) }}"
+    stonith: "{{ stonith | default(False) }}"
+
+- name: Exekutir's exekutir_vars.yml is protected from further modifications
+  file:
+    path: "{{ workspace }}/exekutir_vars.yml"
+    mode: "0444"
+    state: "file"
+
+# N/B: Functioning of this section is critical
+#      e.g. if install_rpms is overriden by exekutir_vars.yml it will
+#           clobber that same variable for EVERY peon, when kommandir's
+#           job.xn runs, and playbooks haul in kommandir_vars.yml
+- name: _SOME_ exekutir_vars.yml values are allowed to leak into kommandir_vars.yml
+  block:
+
+  - name: Exekutir's exekutir_vars.yml is buffered for overriding kommandir_vars.yml
+    set_fact:
+      result: '{{ lookup("file", "{{ workspace }}/exekutir_vars.yml") }}'
+
+  - name: Buffer excludes variables kommandir allowed to override
+    set_fact:
+      result: '{{ result | regex_replace("({{ item }}:.*)", "") }}'
+    # Always ignore these overrides from exekutir_vars.yml
+    # Workaround ansible 2.1 bug in from_yaml
+    with_items:
+      # Don't share cleanup_assertions/workspace_keep/extra_workspace_keep/cleanup_globs
+      - >
+        {{ lookup("file", workspace ~
+                  "/roles/workspace_cleanup/defaults/main.yml")
+                  | from_yaml | to_json | from_json | list }}
+      # Don't share install_rpms/repo_rpms/enable_repos/disable_repos
+      - >
+        {{ lookup("file", workspace ~
+                  "/roles/installed/defaults/main.yml")
+                  | from_yaml | to_json | from_json | list }}
+      - ['compatible_ansible_minimum', 'compatible_ansible_maximum', 'ansible_version']
+      - ['extra_kommandir_setup', 'extra_exekutir_setup', 'job_path', 'kommandir_groups']
+      - ['public_peons', 'stonith', 'kommandir_name_prefix']
+
+  - name: Kommandir's kommandir_vars.yml file is marked as ansible managed
+    lineinfile:
+      dest: "{{ kommandir_workspace }}/kommandir_vars.yml"
+      insertbefore: BOF  # Last defined key wins
+      line: "##### ANSIBLE MANAGED FILE ({{ role_path }})"
+      create: True  # Guarantee from this point firward, it always exists
+
+  - name: Kommandir's kommandir_vars.yml may differ except for values from Exekutir
+    lineinfile:
+      dest: "{{ kommandir_workspace }}/kommandir_vars.yml"
+      regexp: '^{{ item.key }}:.*'
+      line: '{{ item.key }}: {{ item.value }}'
+    # Workaround ansible 2.1 bug in from_yaml
+    with_dict: |
+      {{ lookup("file", kommandir_workspace ~ "/kommandir_vars.yml") |
+         from_yaml | to_json | from_json |
+         combine( result | from_yaml | to_json | from_json ) }}
+
+  - name: Kommandir's kommandir_vars.yml excludes some exekutir-only items
+    lineinfile:
+      dest: "{{ kommandir_workspace }}/kommandir_vars.yml"
+      regexp: '^{{ item }}:.*'
+      state: absent
+    with_items:
+      - extra_exekutir_setup
+      - job_path
+      - kommandir_groups
+      - stonith
+
+  # End of block
+
+- name: If Exekutir's workspace has a cache directory, assume it's pre-populated for use
+  file:
+    src: "../cache"
+    dest: "{{ kommandir_workspace }}/cache"
+    state: link
+  when: (workspace ~ "/cache") | is_dir and
+         not (kommandir_workspace ~ "/cache") | exists
+
+- name: Exekutir's workspace/cache is a link to eventual kommandir_workspace/cache
+  file:
+    src: "{{ kommandir_workspace | basename }}/cache"
+    dest: "{{ workspace }}/cache"
+    force: True  # kommandir_workspace_setup will create it
+    state: link
+  when: not (workspace ~ "/cache") | is_dir
+
+- name: Kommandir doesn't appear in it's inventory hosts files to workaround ansible bug
+  replace:
+    dest: '{{ item }}'
+    regexp: '^(kommandir.*)'
+    replace: '##### ANSIBLE MANAGED ({{role_path}})'
+  with_fileglob:
+    - "{{ kommandir_workspace }}/inventory/*"
+
+- name: Re-add kommandir only to top-level inventory hosts file
+  lineinfile:
+    dest: "{{ kommandir_workspace }}/inventory/hosts"
+    insertafter: '^##### ANSIBLE MANAGED'
+    line: "kommandir"
+    create: True  # Guarantee it exists
+
+- name: Kommandir's host_vars/kommandir.yml file is marked as ansible managed
+  lineinfile:
+    dest: "{{ kommandir_workspace }}/inventory/host_vars/kommandir.yml"
+    insertbefore: BOF  # Last defined key wins
+    line: "##### ANSIBLE MANAGED FILE ({{ role_path }})"
+    create: True  # Guarantee from this point firward, it always exists
+
+# Sync'ing from job_path may have replaced this :S
+- name: From Kommandir's perspective host_vars/kommandir.yml hard-codes important values
+  lineinfile:
+    dest: "{{ kommandir_workspace }}/inventory/host_vars/kommandir.yml"
+    regexp: '^{{ item.key }}:.*'
+    line: '{{ item.key }}: {{ item.value }}'
+  with_dict:
+    ansible_connection: "local"
+    ansible_become: False
+    ansible_host: "localhost"
+    ansible_ssh_host: "localhost"
+    ansible_private_key_file: >
+        {{ '"{{' }} kommandir_workspace {{ '}}' }}/ssh/kommandir_key {{ '"' }}
+
+- name: This and future kommandir's are protected by clobbering existing ssh directory
+  file:
+    dest: "{{ kommandir_workspace }}/ssh"
+    state: absent
+
+- name: The dot-ssh directory is absent
+  file:
+    path: "{{ kommandir_workspace }}/.ssh"
+    state: absent
+
+- name: A new ssh directory is present for kommandir's workspace
+  file:
+    dest: "{{ kommandir_workspace }}/ssh"
+    state: directory
+
+- name: The dot-ssh directory is a symlink to the ssh directory
+  file:
+    dest: "{{ kommandir_workspace }}/.ssh"
+    src: "{{ kommandir_workspace }}/ssh"
+    state: link
+
+- name: Future kommandirs and peons protected by new kommandir ssh private key
   command: ssh-keygen -f "{{ kommandir_workspace }}/ssh/kommandir_key" -N ""
   args:
-    chdir: "{{ kommandir_workspace }}/ssh/"
-    creates: "{{ kommandir_workspace }}/ssh/kommandir_key"
-  when: kommandir_workspace_dirty
+    creates: "{{ kommandir_workspace }}/ssh/kommandir_key.pub"
+    chdir: "{{ kommandir_workspace }}/ssh"
 
-- name: contents of file path in ANSIBLE_PRIVATE_KEY_FILE is buffered if kommandir_workspace_dirty
+- name: Exekutir's public key contents are buffered
   set_fact:
-    result: '{{ lookup("file", ANSIBLE_PRIVATE_KEY_FILE) }}'
-  when: kommandir_workspace_dirty
+    result: '{{ lookup("file", ansible_private_key_file ~ ".pub") }}'
 
-- name: Buffered public key written to kommandir_workspace/ssh/authorized_keys if kommandir_workspace_dirty
+- name: Exekutir's sync. source ssh/authorized_keys allows Exekutir's public key
   lineinfile:
     dest: "{{ kommandir_workspace }}/ssh/authorized_keys"
     line: '{{ result }}'
     create: True
     state: present
-  when: kommandir_workspace_dirty
+
+- name: Kommandir's ssh directory contains exekutir's public key
+  copy:
+    dest: "{{ kommandir_workspace }}/ssh/exekutir_key.pub"
+    # Meh, it's already buffered, why type the name again
+    content: '{{ result }}'
+
+- name: Mandatory job documentation template is rendered into results dir
+  template:
+    dest: "{{ kommandir_workspace }}/results/{{ job_docs_template_dest }}"
+    src: "{{ job_path }}/{{ job_docs_template_src }}"
+    force: False

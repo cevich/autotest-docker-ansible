@@ -1,0 +1,19 @@
+---
+
+peon_groups:
+    - openstack
+    - fedora
+    - updated
+    - docker
+    - autotested
+
+peon_image: 'Fedora-Cloud-25'
+
+peon_size: '20'
+
+peon_flavor: 'm1.medium'
+
+peon_userdata: '{{ workspace }}/roles/peon_created/files/nodocker_userdata.yml'
+
+peon_pre_raw_cmds:
+    - "type -P python || $(type -P dnf || type -P yum) install -y python"

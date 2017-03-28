@@ -1,0 +1,57 @@
+---
+
+- assert:
+    that:
+      - 'empty is defined'
+      - 'adept_debug is defined'
+      - 'uuid is defined'
+      - 'touchstone_filepath | default() not in empty'
+      - 'touch_touchstone | default(False) | bool() in [True, False]'
+
+- block:
+
+  - name: The file touchstone_filepath doesn't exist
+    file:
+      path: "{{ touchstone_filepath }}"
+      state: absent
+
+  - name: The file touchstone_filepath contains the current uuid
+    lineinfile:
+      path: "{{ touchstone_filepath }}"
+      create: True
+      line: "{{ uuid }}"
+
+  when: touch_touchstone
+
+- name: Status of touchstone_filepath is known
+  stat:
+    path: "{{ touchstone_filepath }}"
+  register: result
+
+- name: stone_touched fact is initially false
+  set_fact:
+    stone_touched: False
+
+# Verify it wasn't overriden on the command-line
+- assert:
+    that:
+      - 'stone_touched == False'
+
+- block:
+
+  - name: stone_touched is true when touchstone_filepath exists
+    set_fact:
+      stone_touched: True
+
+  - assert:
+      that:
+        - 'stone_touched == True'
+
+  when: result.stat is defined and
+        result.stat.exists is defined and
+        result.stat.exists
+
+- name: Value of stone_touched is displayed
+  debug:
+    var: "stone_touched"
+  when: adept_debug

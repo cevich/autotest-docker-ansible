@@ -1,0 +1,6 @@
+This job ({{ job_name }}) utilizes a limited
+set of peons configured specially to enable
+docker's liverestore feature.  The full set
+of docker autotest subtests are executed.
+
+(src: {{ job_path }}/{{ job_docs_template_src }})

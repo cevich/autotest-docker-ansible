@@ -10,6 +10,14 @@ cloud_environment:
     OS_CLIENT_CONFIG_FILE: "{{ hostvars.kommandir.workspace }}/clouds.yml"
     HOME: "{{ hostvars.kommandir.workspace }}"
     WORKSPACE: "{{ hostvars.kommandir.workspace }}"
+    OS_AUTH_URL: '{{ lookup("env", "OS_AUTH_URL") | default("",True) }}'
+    OS_TENANT_ID: '{{ lookup("env", "OS_TENANT_ID") | default("",True) }}'
+    OS_TENANT_NAME: '{{ lookup("env", "OS_TENANT_NAME") | default("",True) }}'
+    OS_PROJECT_NAME: '{{ lookup("env", "OS_PROJECT_NAME") | default("",True) }}'
+    OS_USERNAME: '{{ lookup("env", "OS_USERNAME") | default("",True) }}'
+    OS_PASSWORD: '{{ lookup("env", "OS_PASSWORD") | default("",True) }}'
+    OS_REGION_NAME: '{{ lookup("env", "OS_REGION_NAME") | default("",True) }}'
+    OS_CLOUD_NAME: '{{ lookup("env", "OS_CLOUD_NAME") | default("",True) }}'
 
 cloud_asserts:
     - 'empty is defined'
@@ -17,7 +25,7 @@ cloud_asserts:
     - 'peon_flavor is defined'
     - 'hostvars.kommandir.workspace is defined'
     # These were setup by exekutir
-    - '"{{ hostvars.kommandir.workspace }}/ssh/kommandir_key.pub" | is_file'
+    - '"{{ ansible_private_key_file }}.pub" | is_file'
     - '"{{ hostvars.kommandir.workspace }}/ssh/exekutir_key.pub" | is_file'
     # Exekutir's extra_kommandir_setup should have taken care of this
     - '"{{ hostvars.kommandir.workspace }}/clouds.yml" | is_file'
@@ -38,7 +46,7 @@ cloud_provisioning_command:
             {{ "--size " ~ peon_size if peon_size is defined else "" }} \
             {{ "--userdata " ~ peon_userdata if peon_userdata is defined else "" }} \
             {{ inventory_hostname }}-{{ uuid }} \
-            {{ hostvars.kommandir.workspace }}/ssh/kommandir_key.pub \
+            {{ ansible_private_key_file }}.pub \
             {{ hostvars.kommandir.workspace }}/ssh/exekutir_key.pub
     chdir: "{{ hostvars.kommandir.workspace }}"
 

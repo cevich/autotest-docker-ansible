@@ -1,12 +1,15 @@
 ---
 
-- name: The empty value is defined
+- name: Important common facts are defined
   set_fact:
     empty:
         - Null
         - ""
         - []
         - {}
+    hostvarsfile: "{{ inventory_dir }}/host_vars/{{ inventory_hostname }}.yml"
+    result:
+    ansible_private_key_file: '{{ hostvars.kommandir.workspace }}/ssh/kommandir_key'
 
 - assert:
     # These are set automatically by adept.py
@@ -18,14 +21,6 @@
         - "job_name | default() not in empty"
         - "groups.peons is defined"
         - 'no_log_synchronize | default() not in empty'
-
-
-- name: Important variables are initialized
-  set_fact:
-    hostvarsfile: "{{ inventory_dir }}/host_vars/{{ inventory_hostname }}.yml"
-    result:
-    ANSIBLE_PRIVATE_KEY_FILE: '{{ hostvars.kommandir.workspace }}/ssh/kommandir_key'
-  when: hostvarsfile is undefined
 
 - block:  # when: inventory_hostname == "kommandir"
 

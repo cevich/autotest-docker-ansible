@@ -1,0 +1,8 @@
+---
+
+# setup.yml play verifies these values were overwritten
+# during workspace setup because test_exekutir.sh dropped
+# $workspace/variables.yml which should override this one
+# during workspace setup
+uuid: THE_WRONG_VALUE
+some_magic_variable_for_testing: ANOTHER_WRONG_VALUE

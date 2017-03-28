@@ -1,0 +1,8 @@
+---
+
+# File relative to kommandir_workspace which should
+# be resolved into the results dir, as a jinja-template.
+# It should describe the purpose/function of the job and
+# the source for the job files.
+job_docs_template_src: README
+job_docs_template_dest: README

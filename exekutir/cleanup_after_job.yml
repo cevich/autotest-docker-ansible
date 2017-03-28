@@ -1,21 +1,27 @@
 ---
 
-- hosts: exekutir:&!nocloud
-  force_handlers: True
-  roles:
-    - common
-    - role: exekutir_lock
-      lock_type: "exclusive"
-      lock_release: False
-    # Occasionally
-    - kommandir_destroyed
-  # Exclusive lock released by handler
-
-# releases shared lock
 - include: setup_after_job.yml
 
-- hosts: exekutir
+- hosts: all
+  gather_facts: False
+  tasks:
+    - meta: clear_host_errors
+
+- hosts: kommandir:!nocloud
+  gather_subset: 'network'
+  vars_files:
+      - exekutir_vars.yml
   roles:
     - common
-    - role: exekutir_workspace_cleanup
-      when: not adept_debug
+    - kommandir_destroyed  # When it's old or stonith=True
+  post_tasks:
+    - name: Ansible inventory is reloaded
+      meta: refresh_inventory
+
+- hosts: exekutir
+  gather_subset: 'network'
+  vars_files:
+      - exekutir_vars.yml
+  roles:
+    - common
+    - workspace_cleanup

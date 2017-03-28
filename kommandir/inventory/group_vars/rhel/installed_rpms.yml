@@ -1,12 +1,11 @@
 ---
 
-use_dnf: False
-installed_enablerepo:
+enable_repos:
     - rhel-7-server-rpms
     - rhel-7-server-extras-rpms
     - rhel-7-server-optional-rpms
     - rhel-7-server-supplementary-rpms
-installed_rpms:
+install_rpms:
     - docker
     - docker-latest
     - atomic

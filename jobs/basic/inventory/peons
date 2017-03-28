@@ -1,0 +1,10 @@
+
+# Predefined peons group for use by basic job.
+
+[peons]
+
+rhel7-3-docker
+rhelatomic7-3-docker-latest
+
+fedora-25-docker-latest
+fedoratomic-25-docker-latest

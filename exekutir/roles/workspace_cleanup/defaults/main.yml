@@ -2,10 +2,10 @@
 
 # List of items that must be true before the role continues
 cleanup_assertions:
+    - 'empty is defined'
     - 'inventory_hostname == "exekutir"'
     - 'workspace is defined'
     - 'kommandir_workspace is defined'
-    - 'job_xn_done'
     - 'workspace_keep is defined'
     - 'extra_workspace_keep is defined'
     - 'cleanup_globs is defined'
@@ -18,7 +18,7 @@ workspace_keep:
     # Record of IPs / uuids
     - "{{ kommandir_workspace }}/inventory"
     # Exekutir + Kommandir + job overriden variables
-    - "{{ kommandir_workspace }}/variables.yml"
+    - "{{ kommandir_workspace }}/kommandir_vars.yml"
     # Exekutir workspace items...
     - "{{ workspace }}/kommandir_workspace"
     - "{{ workspace }}/inventory"
@@ -34,7 +34,7 @@ workspace_keep:
     - "{{ workspace }}/kommandir_run.exit"
     - "{{ workspace }}/kommandir_cleanup.exit"
     # Exekutir overriden variables"
-    - "{{ workspace }}/variables.yml"
+    - "{{ workspace }}/exekutir_vars.yml"
 
 # Additional file/directory names to NOT remove (combined with the list above)
 extra_workspace_keep: []

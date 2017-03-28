@@ -6,18 +6,62 @@
 
 - assert:
     that:
-        - "inventory_hostname == 'exekutir'"
-        - "job_xn_done"
+        - "inventory_hostname == 'kommandir'"
+        - 'group_names is defined'
+        - '"nocloud" not in group_names'
+        - "stonith|bool in [True, False]"
+        - "cloud_destruction_command is defined"
+        - "cloud_environment is defined"
 
-- name: cloud_destruction_command is executed
-  shell: "{{ item.command | mandatory }}"
-  environment: "{{ kommandir_destruction_environment }}"
-  args:
-    chdir: "{{ item.chdir | default(workspace) }}"
-    executable: "{{ item.executable | default(omit) }}"
-    creates: "{{ item.creates | default(omit) }}"
-    removes: "{{ item.removes | default(omit) }}"
-  # This can fail for numerous reasons, pretend we don't care
+- name: Status of epoch_path is buffered
+  stat:
+    path: "{{ epoch_path }}"
   ignore_errors: True
   register: result
-  with_dict: "{{ cloud_destruction_command }}"
+
+- name: ctime is retrieved from buffered status, or set to 0.0 on failure.
+  set_fact:
+    result: "{{ result.stat.ctime if result|success else 0.0 }}"
+
+- name: Kommandir's age is buffered
+  set_fact:
+    result: '{{ ansible_date_time.epoch | float() - result | float() }}'
+
+- name: Kommandir's age in days is computed
+  set_fact:
+    result: '{{ result | float() / (60.0 * 60.0 * 24.0) }}'
+
+- name: Kommandir's age in days is displayed
+  debug:
+    var: "result"
+  when: adept_debug
+
+- name: Buffer True/False kommandir age is more than too_old
+  set_fact:
+    result: "{{ result | int() > too_old | int() }}"
+
+# Allows customized checking of jinja templates / variables in cloud_destruction_command
+- name: Kommandir's list of cloud_asserts are all true
+  assert:
+    that: '{{ cloud_asserts }}'
+  delegate_to: exekutir
+  when: result or stonith
+
+- name: cloud_destruction_command is executed
+  shell: "{{ cloud_destruction_command.command | mandatory }}"
+  environment: "{{ cloud_environment }}"
+  args:
+    chdir: "{{ cloud_destruction_command.chdir | default(workspace) }}"
+    executable: "{{ cloud_destruction_command.executable | default(omit) }}"
+    creates: "{{ cloud_destruction_command.creates | default(omit) }}"
+    removes: "{{ cloud_destruction_command.removes | default(omit) }}"
+  register: destruction_result
+  when: result or stonith
+  delegate_to: exekutir
+
+- name: Output of cloud_destruction_command is recorded in results directory
+  copy:
+    dest: '{{ hostvars.exekutir.workspace }}/results/kommandir_destruction_result.yml'
+    # Workaround ansible 2.1 bug
+    content: '{{ destruction_result | to_json | from_json | to_nice_yaml }}'
+  delegate_to: exekutir

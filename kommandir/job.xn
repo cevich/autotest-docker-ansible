@@ -1,10 +1,33 @@
 ---
 # vim-syntax: yaml
 
+- variable:
+    name: "ANSIBLE_PRIVATE_KEY_FILE"
+    value: "$WORKSPACE/ssh/kommandir_key"
+
+- variable:
+    name: "ANSIBLE_CONFIG"
+    value: "$WORKSPACE/ansible.cfg"
+
+- variable:
+    name: "TERM"
+    value: "ansi"
+
+- command:
+    contexts:
+        - setup
+    filepath: "/bin/bash"
+    arguments: |
+        -c 'cd $WORKSPACE;
+            echo "-----";
+            KOMMANDIR_VARS="$WORKSPACE/kommandir_vars.yml";
+            echo "Contents of $KOMMANDIR_VARS";
+            [ ! -r "$KOMMANDIR_VARS" ] || cat "$KOMMANDIR_VARS";'
+
 # N/B: This file can be overwritten by a copy from job_path.
 #      however the built-in setup/run/cleanup.yml playbooks
 #      assume they are involked as below:
+
 - playbook:
     filepath: "${WORKSPACE}/${ADEPT_CONTEXT}.yml"
     inventory: "${WORKSPACE}/inventory"
-    varsfile: "${WORKSPACE}/variables.yml"

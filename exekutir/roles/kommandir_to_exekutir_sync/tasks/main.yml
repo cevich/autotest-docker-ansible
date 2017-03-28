@@ -9,24 +9,18 @@
         - 'inventory_hostname == "kommandir"'
         - 'kommandir_workspace is defined'
         - 'hostvars.exekutir.kommandir_workspace is defined'
+        - '"nocloud" not in group_names'
+        - 'workspace_rsync_excludes | default() not in empty'
 
-- name: exekutir's copy of kommandir_workspace is kept in sync. with kommandir's for cloud_type != nocloud
+- name: exekutir's copy of kommandir_workspace synchronized from kommandir's
   synchronize:
-    # From kommandir to exekutir
+    checksum: True  # Don't trust local clock
+    group: False  # Would require permissions on exekutir
+    owner: False  # Same
     mode: pull
-    archive: true
-    # Just in case there are any, pretend they're real files.
-    copy_links: true
-    src: "{{ kommandir_workspace }}"
-    dest: "{{ hostvars.exekutir.workspace }}"
-  when: '"nocloud" not in group_names'
-
-- name: Kommandir's kommandir_workspace_dirty set true to force remote re-initialization
-  lineinfile:
-    dest: "{{ hostvarsfile }}"
-    insertafter: EOF
-    line: "kommandir_workspace_dirty: True"
-    regexp: "^kommandir_workspace_dirty:.*"
-    state: present
-  when: not job_xn_done
-  delegate_to: exekutir
+    rsync_opts: "{{ workspace_rsync_excludes }}"
+    src: "{{ kommandir_workspace }}/"
+    dest: "{{ hostvars.exekutir.kommandir_workspace }}"
+  # Kommandir may have died or gone/away
+  ignore_errors: '{{ adept_context == "cleanup" }}'
+  no_log: '{{ no_log_synchronize }}'

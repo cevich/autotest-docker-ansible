@@ -7,38 +7,41 @@
 - assert:
     that:
         - 'inventory_hostname == "kommandir"'
-        - 'cloud_type is defined'
+        - '"nocloud" not in group_names'
         - 'ansible_ssh_host is defined or ansible_host is defined'
-        - 'cloud_type is defined'
 
 - name: Key variables are displayed
   debug:
     var: "{{ item }}"
   when: adept_debug
-  with_items: ["cloud_type","ansible_ssh_host","ansible_host","ansible_ssh_port","ansible_port","ansible_ssh_user","ansible_user","wait_for_timeout"]
+  with_items: ["ansible_ssh_host","ansible_host","ansible_ssh_port","ansible_port","ansible_ssh_user","ansible_user","wait_for_timeout"]
 
 - name: kommandir's ssh port is open from perspective of exekutir
   wait_for:
-    # Old / deprecated names must take precedence 
     host: "{{ ansible_ssh_host | default(ansible_host) }}"
     port: "{{ ansible_ssh_port | default(ansible_port | default(22)) }}"
     # Fail quickly == retry sooner
     connect_timeout: 1
     # Minumum is two-DNS failures + one second
-    timeout: "{{ wait_for_timeout | default( 13 ) }}"
+    timeout: "{{ wait_for_timeout }}"
     state: "started"
-  # Run this from a node that actually exists
   delegate_to: exekutir
-  # Show "Changed" anytime this runs for clarity.
-  changed_when: True
-  # Unless exekutir == kommandir
-  when: '"nocloud" not in group_names'
   register: result
-  # There are many reasons this can fail, only the last one matters
-  retries: 10
+  until: result | success
+  retries: '{{ wait_for_timeout }}'
   delay: 1
 
-- name: The sleep command executes successfully on Kommandir
-  command: "/bin/sleep 0.1"
-  # Show "Changed" anytime this runs for clarity.
-  changed_when: True
+# Any remote module that fails will immediatly cause host to be marked uncreachable
+# after zero retries.  Run a local shell command to do the detection, with retries,
+# until it's successful.
+- name: The command from template referenced by test_command_template is eventually successful
+  command: '{{ lookup("template", test_command_template) }}'
+  register: result
+  delegate_to: exekutir
+  until: result | success
+  retries: '{{ wait_for_timeout }}'
+  delay: 1
+
+- name: Kommandir's facts are gathered
+  setup:
+    gather_subset: 'network'

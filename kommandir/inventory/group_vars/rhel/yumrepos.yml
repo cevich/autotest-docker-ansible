@@ -6,8 +6,3 @@ enable_rh_repos:
     - rhel-7-server-extras-rpms
     - rhel-7-server-optional-rpms
     - rhel-7-server-supplementary-rpms
-installed_enablerepo:
-    - rhel-7-server-rpms
-    - rhel-7-server-extras-rpms
-    - rhel-7-server-optional-rpms
-    - rhel-7-server-supplementary-rpms
