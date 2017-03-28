@@ -1,0 +1,11 @@
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# vim-syntax: ini
+
+# Give localhost an alias for playbook/role clarity
+exekutir
+
+# Host may not exist, but allow it's host_vars and group_vars to be read
+kommandir

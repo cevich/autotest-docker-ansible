@@ -1,0 +1,10 @@
+---
+
+# Depends:
+#   touchstone_file
+#   touchstone_contents
+
+- name: touchstone_file is touched
+  copy:
+    dest: "{{ touchstone_file }}"
+    content: "{{ touchstone_contents }}"

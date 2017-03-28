@@ -1,0 +1,35 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+- assert:
+    that:
+        - "workspace is defined"
+        - "adept_debug is defined"
+
+# ansible_version is not uniform across all versions
+- name: ansible --version output is captured
+  command: ansible --version
+  register: result
+  # Not defined for older ansible versions
+  when: ansible_version is undefined or
+        ansible_version.string is undefined
+
+- name: first line of result is split by spaces
+  set_fact:
+    result: "{{ result.stdout_lines[0].split(' ') }}"
+  when: ansible_version is undefined or
+        ansible_version.string is undefined
+
+- name: second item in list is buffered
+  set_fact:
+    ansible_version:
+        string: "{{ result[1] }}"
+  when: ansible_version is undefined or
+        ansible_version.string is undefined
+
+- name: ansible version is displayed
+  debug:
+    var: "ansible_version"

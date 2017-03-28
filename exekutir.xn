@@ -1,0 +1,180 @@
+---
+# vim-syntax: yaml
+
+# Initial workspace configuration
+- command:
+    contexts:
+        - setup
+    filepath: "/bin/bash"
+    # N/B: Don't use single or double-quotes w/in comments of quoted
+    # shell commands (below).  It will cause a very bad day when things
+    # break in very strange / unexpected ways.  You've been warned!
+    arguments: |
+        -c 'set -e;
+            cd "$WORKSPACE";
+            # Dont modify source files, transfer to workspace
+            echo "Copying ${ADEPT_PATH}/exekutir/ -> $WORKSPACE";
+            cp --target-directory="." \
+               --recursive \
+               "${ADEPT_PATH}/exekutir/"*;
+            echo "-----";
+            echo "Contents of variables.yml -";
+            [ ! -r "${WORKSPACE}/variables.yml" ] || cat "${WORKSPACE}/variables.yml";
+            echo "-----";
+            # Older ansible doesnt support host/group vars in inventory directory.
+            # Because the ADEPT playbooks treat them the same, just use symlinks.
+            echo "Symlinking ${WORKSPACE}/inventory/{host,group}_vars to $WORKSPACE";
+            ln -sf \
+                "inventory/host_vars" \
+                "host_vars";
+            ln -sf \
+                "inventory/group_vars" \
+                "group_vars";
+            # Ansible requires ssh keys be setup ahead of time.  Create them if they
+            # dont already exist, otherwise copy them to a standard place
+            # from the $ANSIBLE_PRIVATE_KEY_FILE variable if it was exported.
+            echo "-----";
+            echo "Creating $WORKSPACE/ssh";
+            mkdir -p "ssh";
+            ln -sf "ssh" ".ssh";
+            echo "-----";
+            EXEKUTIR_KEY="ssh/exekutir_key"
+            if [ -r "${ANSIBLE_PRIVATE_KEY_FILE}" ];
+            then
+                echo "Copying ssh keys from $(dirname $ANSIBLE_PRIVATE_KEY_FILE)";
+                cp -a "${ANSIBLE_PRIVATE_KEY_FILE}" "$EXEKUTIR_KEY";
+                cp -a "${ANSIBLE_PRIVATE_KEY_FILE}.pub" "${EXEKUTIR_KEY}.pub";
+            # A key already exists, use it, do not overwrite.
+            elif [ ! -e "$EXEKUTIR_KEY" ];
+            then
+                echo "WARNING: Generating new ssh keys for kommandir in $WORKSPACE/ssh";
+                echo "Do not loose them if you need to access a remote kommandir.";
+                echo "If this is not what you want, set the ANSIBLE_PRIVATE_KEY_FILE";
+                echo "env. var";
+                echo;
+                ssh-keygen -q -f "$EXEKUTIR_KEY" -N "";
+            fi;
+            echo "-----";
+            echo "Fixing $WORKSPACE/ssh permissions"
+            chmod -R 700 "ssh";'
+
+# Set global variables from file contents or default values.
+# These are available to both commands (as env. vars) and in
+# ansible playbooks (as --extra-vars). N/B: In ansible these
+# will silently override same-name variables at all scopes!
+# (i.e. set_facts on them will silently not work)
+- variable:
+    name: "ANSIBLE_PRIVATE_KEY_FILE"
+    value: "$WORKSPACE/ssh/exekutir_key"
+# Older ansible only picks this up if its defined in an env. var.
+# Newer ansible will pick it up if its in the playbook directory.
+- variable:
+    name: "ANSIBLE_CONFIG"
+    value: "$WORKSPACE/ansible.cfg"
+
+# For all contexts, exit non-zero immediatly on failure.
+# Transition summary:
+#   setup & run:
+#      - Setup exekutirs workspace, find or create kommandir.
+#      - Setup & sync. exekutir workspace to kommandir workspace.
+- playbook:
+    contexts:
+        - setup
+        - run
+    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}_before_job.yml"
+    inventory: "${WORKSPACE}/inventory"
+    varsfile: "${WORKSPACE}/variables.yml"
+
+# Pre-job.xn cleanup must be allowed to fail so post-job.xn cleanup may run
+# Transition summary:
+#   cleanup:
+#      - Setup exekutirs workspace, find or create kommandir.
+#      - Setup & sync. exekutir workspace to kommandir workspace.
+- playbook:
+    contexts:
+        - cleanup
+    filepath: "${WORKSPACE}/cleanup_before_job.yml"
+    inventory: "${WORKSPACE}/inventory"
+    varsfile: "${WORKSPACE}/variables.yml"
+    # Special case, do not exit on non-zero, dump to a file for inspection
+    exitfile: "${WORKSPACE}/exekutir_cleanup_before_job.exit"
+
+# Nested call to adept.py on kommandir, exit code is ignored
+# but it is written to a file.
+# Transition summary:
+#   setup:
+#      - Create all peons and volumes
+#      - Configure all peons
+#   run:
+#      - Execute tests on successfully created peons
+#   cleanup:
+#       - Unconditionaly remove all peons and volumes
+- command:
+    filepath: "/bin/bash"
+    # exekutir/roles/common/tasks/main.yml depends on this filename
+    exitfile: "$WORKSPACE/kommandir_${ADEPT_CONTEXT}.exit"
+    arguments: >
+        -c 'cd "$WORKSPACE";
+            CLEANUP_BEFORE_FILE="exekutir_cleanup_before_job.exit";
+            # Do not run job.xn cleanup if kommandir discover/create failed
+            if [ -r "$CLEANUP_BEFORE_FILE" ] && \
+               [ "$(cat $CLEANUP_BEFORE_FILE)" != "0" ];
+            then
+                echo "WARNING: Discover/create kommandir for cleanup failed.";
+                echo "Non-zero exit code in $CLEANUP_BEFORE_FILE";
+                echo "NOT running kommandir job.xn";
+                exit 0;
+            fi;
+
+            cd "${WORKSPACE}/kommandir_workspace";
+            # variables.yml produced by kommandir_workspace_setup role
+            export UUID=$(grep -s -x -m 1 -e "^uuid: .*$" variables.yml | cut -d: -f2 | tr -d [:blank:]);
+            echo "Job UUID=$UUID";
+
+            if grep -qi "exekutir_is_kommandir: True" "variables.yml";
+            then
+                echo "Local Kommandir calling adept.py for job.xn";
+                # Absolute path is needed here
+                ANSIBLE_PRIVATE_KEY_FILE=$WORKSPACE/kommandir_workspace/ssh/kommandir_key \
+                ./adept.py \
+                    "$ADEPT_CONTEXT" \
+                    "." \
+                    "job.xn" \
+                    $ADEPT_OPTIONAL;
+                RET=$?;
+            # Assume remote kommandir is reachable by ssh as user $UUID
+            else
+                echo "Remote Kommandir calling adept.py for job.xn";
+                /usr/bin/ssh -tt \
+                    -o "KbdInteractiveAuthentication=no" \
+                    -o "PreferredAuthentications=publickey" \
+                    -o "PasswordAuthentication=no" \
+                    -o "StrictHostKeyChecking=no" \
+                    -o "UserKnownHostsFile=/dev/null" \
+                    -o "User=$UUID" \
+                    -i "$WORKSPACE/ssh/exekutir_key" \
+                    "ANSIBLE_PRIVATE_KEY_FILE=/home/$UUID/ssh/kommandir_key adept.py $ADEPT_CONTEXT /home/$UUID /home/$UUID/job.xn $ADEPT_OPTIONAL";
+                    RET=$?
+            fi;
+
+            echo "-----";
+            echo "Returning from nested adept.py job.xn, exit code: $RET";
+            exit $RET;'
+
+# For all contexts, ignore exit code, always attempt to sync. to exekutir
+# Context Transition summary:
+#   setup:
+#       - sync. kommandir workspace to exekutir
+#   run:
+#       - sync. kommandir workspace to exekutir
+#   cleanup:
+#       - sync. kommandir workspace to exekutir
+#       - if no other jobs are running &&
+#             kommandir != exekutir &&
+#             kommandir uptime > 1 day:  destroy kommandir
+#       - cleanup unnecessary files from workspace
+- playbook:
+    filepath: "${WORKSPACE}/${ADEPT_CONTEXT}_after_job.yml"
+    inventory: "${WORKSPACE}/inventory"
+    exitfile: "${WORKSPACE}/exekutir_${ADEPT_CONTEXT}.exit"
+    varsfile: "${WORKSPACE}/variables.yml"

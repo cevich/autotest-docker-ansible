@@ -1,0 +1,51 @@
+---
+
+# Depends:
+#   touchstone_file
+#   touchstone_contents
+# Registers:
+#   stonetouched -- True if touchstone_file exists and touchstone_contents match
+
+- name: Status of touchstone_file is retrieved
+  stat:
+    path: "{{ touchstone_file }}"
+  register: result
+
+- name: Contents of touchstone_file match touchstone_contents
+  command: >
+    /bin/test "{{ touchstone_contents }}"
+              ==
+              "{{ lookup('file',touchstone_file) }}"
+  register: result
+  # Returns non-zero if test fails
+  ignore_errors: True
+  # stat + exists check required for older ansible versions
+  when: touchstone_contents != [] and
+        result.stat is defined and
+        result.stat.exists is defined and
+        result.stat.exists == True and
+        result.stat.isfile == True
+
+- name: result is True when touchstone_file exists and touchstone_contents match
+  set_fact:
+    result: True
+  # rc attribute not defined in stat
+  when: touchstone_contents != [] and
+        result.rc is defined and
+        result | success
+
+- name: result is True when touchstone_file exists (contents ignored)
+  set_fact:
+    result: True
+  when: touchstone_contents == [] and
+        result | success
+
+- name: result is False if result is not True
+  set_fact:
+    result: False
+  # Catches both stat's result and command's result
+  when: result != True
+
+- name: stonetouched set to value of result
+  set_fact:
+    stonetouched: "{{ result }}"

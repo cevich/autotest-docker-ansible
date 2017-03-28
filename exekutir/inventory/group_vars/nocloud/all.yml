@@ -1,0 +1,59 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# List of ansible assert module tests to verify requirements are met
+# for executing cloud_provisioning_command and cloud_destruction_command.
+# These should check any/all variables used as command-line arguments or
+# in the cloud_environment dict.  If any evaluate false, no
+# provisioning/destruction commands will be executed and an error will
+# be raised indicated which one failed.
+cloud_asserts:
+    # Any ansible variable may be tested.  This one is just an example,
+    # it's presense (among others) is guaranteed by adept.py
+    - 'workspace is defined'
+    # These two are also just examples of testing environment variables
+    # and file read-access test.  The ANSIBLE_PRIVATE_KEY_FILE env. var.
+    # is assumed to have been prepared by exekutir.xn
+    - 'lookup("pipe","test -r $ANSIBLE_PRIVATE_KEY_FILE; echo $?") == "0"'
+    - 'lookup("pipe","test -r $ANSIBLE_PRIVATE_KEY_FILE.pub; echo $?") == "0"'
+
+# Optional, a dictionary of environment variables to set during the
+# execution of cloud_provisioning_command/cloud_destruction_command.
+# These should also be covered by cloud_asserts (above) to make problems
+# obvious.
+#
+# cloud_environment: {}
+
+# Ansible shell module arguments needed to both create a new kommandir
+# and discover an existing commandir.  In both cases, it's expected to
+# exit zero and output a YAML dictionary.  The dictionary contents
+# will be merged into workspace/inventory/host_vars/kommandir.yml; therefore,
+# they must define all variables necessary for ansible to manage the host
+# from the exekutir (which may be running ansible 2.1).  Since they are
+# read by ansible, there is full support for jinja2 templates as/in values.
+cloud_provisioning_command:
+    # Can use any argument supported by the ansible command module.
+    chdir: "{{ workspace }}"
+    # Any needed parameters should be passed to the command.  This one,
+    # just outputs the basic YAML needed to use the exekutir also as
+    # the kommandir.
+    command: |
+      cat << EOF
+      ---
+      inventory_hostname: kommandir
+      ansible_host: 127.0.0.1
+      ansible_ssh_host: {{ ansible_host }}
+      ansible_connection: local
+      ansible_become: False
+      EOF
+
+# Same rules as for cloud_asserts, cloud_environment, and
+# cloud_provisioning_command.  The command need not actually
+# destroy the kommandir, if instead some other per-job finalization
+# tasks are needed.  However, in this specific case nothing is
+# defined because kommandir == exekutir.
+#
+# cloud_destruction_command: {}
