@@ -45,11 +45,20 @@ kommandir_workspace: '{{ workspace }}/kommandir_workspace'
 kommandir_workspace_dirty: True
 
 # Path where job's kommandir.xn, inventory, and variables are found.
+# N/B: Intended to be overriden from command-line or in variables.yml
 job_path: "{{ lookup('env','ADEPT_PATH') }}/jobs/full"
 
+# Short name of the job, used to identify/mark resources and files
+# N/B: Intended to be overriden from command-line or in variables.yml
 job_name: "{{ job_path | basename }}"
 
 # Prevents resource clashes across jobs, must be unique,
 # must be DNS and User Name compatible.  Must be all on
 # a single line, b/c common role will hard-code the actual value.
-uuid: "x{{ [ansible_date_time, ansible_hostname, ansible_uptime_seconds, ansible_memfree_mb] | to_uuid | replace('-','') | truncate(8,true,'') }}"
+# N/B: Intended to be overriden from command-line or in variables.yml with
+# more human-readable value.
+uuid: "x{{ [ansible_date_time, ansible_hostname,
+            ansible_uptime_seconds, ansible_memfree_mb] |
+           to_uuid |
+           replace('-','') |
+           truncate(8,true,'') }}"
