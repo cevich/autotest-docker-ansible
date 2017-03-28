@@ -34,5 +34,5 @@ script:
     - cd docs && make html; cd ..
     - unit2 -vfc
     # Check for some typos / git commit problems (except in this file)
-    - for i in $TYPOS; do echo; echo "$i"; git log -p origin/master..HEAD $(ls -1 | grep -v .travis.yml) | grep -a -2 "$i"; test "$?" == "1" || exit 1; done
+    - for i in $TYPOS; do echo; echo "$i"; git log -p $TRAVIS_COMMIT_RANGE $(ls -1 | grep -v .travis.yml) | grep -a -2 "$i"; test "$?" == "1" || exit 1; done
     - ./test_exekutir_xn.sh
