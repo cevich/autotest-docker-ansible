@@ -791,7 +791,7 @@ class Variable(ActionBase):
 
     def action(self):
         """
-        Perform desired modifications to global variables
+        Populate global variable values
         """
         envars = self.make_env()
         value = None
