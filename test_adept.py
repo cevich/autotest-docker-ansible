@@ -615,7 +615,6 @@ class TestParameters(TestCaseBase):
         # Stub in str(field number) as values for each field
         source = ['/path/to/script']
         source.extend([str(num) for num in xrange(len(supd.fields))])
-        source = tuple(source)
 
         # extend scope for verification
         mocks = {}

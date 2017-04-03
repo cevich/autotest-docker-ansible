@@ -178,7 +178,7 @@ class Parameters(Sequence):
         remaining = [_.strip() for _ in source[len(self.FIELDS):] if _.strip()]
         self._data[self.FIELDS[-1]] = " ".join(remaining)
         self._xform(self.FIELDS[-1])
-        # Make it imutable
+        # Make it imutable (convertable from dict) pylint: disable=R0204
         self._data = self.STORAGE_CLASS(**self._data)
 
     def _xform(self, key):
@@ -884,33 +884,36 @@ def action_items(yaml_document, parameters_source=None):
         parameters_source = sys.argv
     params = Parameters(parameters_source)
     index = 0
+
     for document in yaml_document:
-        if document:
-            for sequence in document:
-                if sequence:
-                    for node_name, dargs in sequence.iteritems():
-                        # Implies first item == 1
-                        index += 1
-                        # Find parsing/syntax errors for all items
-                        klass = action_class(index, node_name)
-                        applies_to = dargs.pop('contexts', [])
-                        if not isinstance(applies_to, (list, tuple)):
-                            raise ValueError(errfmt
-                                             % (getattr(params, XTN),
-                                                params.context,
-                                                index, applies_to))
-                        # Empty list applies to everything
-                        if applies_to and params.context not in applies_to:
-                            continue
-                        try:
-                            yield klass(index, **dargs)
-                        except TypeError:
-                            fmt = errpfx + ("%s node is missing required "
-                                            "values, see documentation")
-                            raise ValueError(fmt
-                                             % (getattr(params, XTN),
-                                                params.context,
-                                                index, klass.__name__))
+        if not document:
+            continue
+        for sequence in document:
+            if not sequence:
+                continue
+            for node_name, dargs in sequence.iteritems():
+                # Implies first item == 1
+                index += 1
+                # Find parsing/syntax errors for all items
+                klass = action_class(index, node_name)
+                applies_to = dargs.pop('contexts', [])
+                if not isinstance(applies_to, (list, tuple)):
+                    raise ValueError(errfmt
+                                     % (getattr(params, XTN),
+                                        params.context,
+                                        index, applies_to))
+                # Empty list applies to everything
+                if applies_to and params.context not in applies_to:
+                    continue
+                try:
+                    yield klass(index, **dargs)
+                except TypeError:
+                    fmt = errpfx + ("%s node is missing required "
+                                    "values, see documentation")
+                    raise ValueError(fmt
+                                     % (getattr(params, XTN),
+                                        params.context,
+                                        index, klass.__name__))
 
 
 def main(parameters_source=None, stdin=sys.stdin,
