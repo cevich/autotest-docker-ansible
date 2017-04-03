@@ -17,11 +17,11 @@ from urlparse import urlparse
 from urlparse import urlunparse
 import json as simplejson
 import unittest2 as unittest
-import test_adept
 # ref: http://www.voidspace.org.uk/python/mock/index.html
 from mock import Mock
 from mock import mock_open
 from mock import patch
+import test_adept
 
 
 # For test discovery all test modules must be importable from the top level
@@ -223,7 +223,7 @@ class TestMain(TestCaseBase):
     def test_create(self):
         """Test main calls discover then create functions"""
         # When discovery fails, create is called.
-        self.discover.side_effect = ValueError("Unittest error message")
+        self.discover.side_effect = IndexError("Unittest error message")
         with self.assertLogs(level='WARNING') as context:
             self.uut.main([self.uut.DISCOVER_CREATE_NAME,
                            'foobar', 'snafu'],
@@ -232,6 +232,17 @@ class TestMain(TestCaseBase):
                          r'.*existing.*%s' % 'foobar')
         self.assertFalse(self.destroy.called)
         self.assertTrue(self.create.called)
+
+    def test_create_exception(self):
+        """Test main calls discover and raises important exceptions"""
+        args = ([self.uut.DISCOVER_CREATE_NAME,
+                 'foobar', 'snafu'],
+                self.service_sessions)
+        msg = "Unittest error message"
+        for xcept in (RuntimeError(msg), ValueError(msg), KeyError(msg)):
+            with self.subTest(exception=xcept):
+                self.discover.side_effect = xcept
+                self.assertRaisesRegex(xcept.__class__, msg, self.uut.main, *args)
 
     def test_create_exclusive(self):
         """Test main does not create when discover successful"""
@@ -348,7 +359,7 @@ class TestDiscoverCreateDestroyBase(TestCaseBase):
                 written = write_call[0][0]
                 break
         self.assertIsNotNone(written)
-        for token in ('---', 'inventory_hostname', 'ansible_ssh_host'):
+        for token in ('---', 'host_name', 'ansible_ssh_host'):
             self.assertIn(token, written)
         for value in (name, ip_address):
             self.assertIn(value, written)

@@ -51,7 +51,6 @@ PIP_REQUIREMENTS = [
     'appdirs==1.4.2',
     'iso8601==0.1.11',
     'keystoneauth1==2.18.0',
-    'os-client-config==1.21.1',
     'pbr==1.10.0',
     'positional==1.1.1',
     'PyYAML==3.12',
@@ -72,10 +71,10 @@ DEFAULT_TIMEOUT = 300
 
 # Must use format dictionary w/ keys: name, ip_addr, and uuid
 OUTPUT_FORMAT = """---
-inventory_hostname: {name}
 ansible_host: {ip_addr}
-ansible_ssh_host: {{{{ ansible_host }}}}
+ansible_ssh_host: {ip_addr}
 host_uuid: {uuid}
+host_name: {name}
 """
 
 
@@ -437,6 +436,7 @@ class TimeoutCreate(TimeoutAction):
                                   substituted with the ``auth_key_lines`` JSON list.
         """
         self.os_rest = OpenstackREST()
+
         self.os_rest.compute_request('/flavors', 'flavors')
         flavor_details = self.os_rest.child_search('name', flavor)
         logging.debug("Flavor %s is id %s", flavor, flavor_details['id'])
@@ -488,10 +488,13 @@ class TimeoutCreate(TimeoutAction):
         self.os_rest.compute_request('/servers', 'server',
                                      'post', post_json=dict(server=server_json))
         server_id = self.os_rest.response_json['id']
-        super(TimeoutCreate, self).__init__(server_id)
+        super(TimeoutCreate, self).__init__(name, server_id)
 
-    def am_done(self, server_id):
+    def am_done(self, name, server_id):
         """Return server_id if active and powered up, None otherwise"""
+        # Immediatly bail out if somehow another server exists with name
+        if self.os_rest.server_list().count(name) > 1:
+            raise RuntimeError("More than one server %s found during creation", name)
         try:
             server_details = self.os_rest.server(uuid=server_id)
         except ValueError:   # Doesn't exist yet
@@ -677,14 +680,18 @@ class TimeoutDeleteVolume(TimeoutAction):
             return None  # try again
 
 
-def discover(name=None, uuid=None, router_name=None, private=False):
+def discover(name=None, uuid=None, router_name=None, private=False, **dargs):
     """
     Write ansible host_vars to stdout if a VM name exists with a floating IP.
 
     :param name: Name of the VM to search for
     :param uuid: Optional, search by uuid instead of name
     :param router_name: Name of router for address lookup (if more than one)
+    :param dargs: Completely ignored
+    :raise RuntimeError: Severe conditions which must result in script exit
+    :raise IndexError: No server found with name
     """
+    del dargs
     os_rest = OpenstackREST()
 
     # Prefer to operate on ID's because they can never race/clash
@@ -692,36 +699,41 @@ def discover(name=None, uuid=None, router_name=None, private=False):
         thing = uuid
     elif name:
         thing = name
-        if os_rest.server_list().count(name) > 1:
-            raise RuntimeError("More than one server %s found", name)
     else:
-        raise ValueError("Must pass name and/or uuid to destroy()")
+        raise RuntimeError("Must pass name and/or uuid to discover()")
 
     logging.info("Trying to discover server %s", thing)
 
-    if private:
-        net_type = 'fixed'
+    nr_found = os_rest.server_list().count(name)
+    if nr_found == 1:
+        if private:
+            net_type = 'fixed'
+        else:
+            net_type = 'floating'
+
+        # Throws exception if neither name or uuid are set
+        ip_addr = os_rest.server_ip(name=name, uuid=uuid,
+                                    net_name=router_name, net_type=net_type)
+        if name is None:
+            name = os_rest.response_json['name']  # Cached by server_ip()
+        if uuid is None:
+            uuid = os_rest.response_json['id']
+        sys.stdout.write(OUTPUT_FORMAT.format(name=name, uuid=uuid, ip_addr=ip_addr))
+    elif nr_found > 1:
+        raise RuntimeError("More than one server %s found", name)
     else:
-        net_type = 'floating'
-
-    # Throws exception if neither name or uuid are set
-    ip_addr = os_rest.server_ip(name=name, uuid=uuid,
-                                net_name=router_name, net_type=net_type)
-    if name is None:
-        name = os_rest.response_json['name']  # Cached by server_ip()
-    if uuid is None:
-        uuid = os_rest.response_json['id']
-    sys.stdout.write(OUTPUT_FORMAT.format(name=name, uuid=uuid, ip_addr=ip_addr))
+        raise IndexError("No server %s found", thing)
 
 
-def destroy(name, uuid=None):
+def destroy(name=None, uuid=None, **dargs):
     """
     Destroy VM name (or uuid) and any volumes currently attached to it
 
     :param name: Name of the VM to destroy
     :param uuid: Optional, search by uuid instead of name
+    :param dargs: Ignored
     """
-
+    del dargs
     os_rest = OpenstackREST()
 
     # Prefer to operate on ID's because they can never race/clash
@@ -944,14 +956,15 @@ def main(argv, service_sessions):
         # The general exception is re-raised on secondary exception
         try:
             OpenstackREST(service_sessions)
-            discover(dargs['name'], dargs['router_name'], dargs['private'])
+            discover(**dargs)
             if basename == ONLY_CREATE_NAME:  # no exception == found VM
                 logging.error("Found existing vm %s, refusing to re-create!"
                               "  Exiting non-zero.", dargs['name'])
                 sys.exit(1)
-        except Exception, xcept:
+        except IndexError, xcept:
             # Not an error (yet), will try creating VM next
             logging.warning("Failed to find existing VM: %s.", dargs['name'])
+            logging.debug(str(xcept))
             try:
                 dargs = parse_args(argv, 'create')
                 OpenstackREST(service_sessions)
@@ -967,7 +980,7 @@ def main(argv, service_sessions):
         dargs = parse_args(argv, 'destroy')
         OpenstackREST(service_sessions)
         logging.info("Destroying VM %s", dargs['name'])
-        destroy(dargs['name'])
+        destroy(**dargs)
     else:
         logging.error("Script was not called as %s, %s, or %s", *ALLOWED_NAMES)
         parse_args(argv, 'help')

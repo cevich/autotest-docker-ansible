@@ -39,6 +39,23 @@
     "status_code": 202
   },
   {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+          "name": "foobar"
+        },
+        {
+          "id": "547996c1db08",
+          "name": "anotherone"
+        }
+      ]
+    },
+    "sequence_number": 42,
+    "status_code": 200
+  },
+  {
     "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
       "server": {
@@ -57,6 +74,23 @@
     "status_code": 200
   },
   {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+          "name": "foobar"
+        },
+        {
+          "id": "547996c1db08",
+          "name": "anotherone"
+        }
+      ]
+    },
+    "sequence_number": 52,
+    "status_code": 200
+  },
+  {
     "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
       "server": {
@@ -72,6 +106,23 @@
       }
     },
     "sequence_number": 60,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+          "name": "foobar"
+        },
+        {
+          "id": "547996c1db08",
+          "name": "anotherone"
+        }
+      ]
+    },
+    "sequence_number": 62,
     "status_code": 200
   },
   {
@@ -100,18 +151,35 @@
     "status_code": 200
   },
   {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+          "name": "foobar"
+        },
+        {
+          "id": "547996c1db08",
+          "name": "anotherone"
+        }
+      ]
+    },
+    "sequence_number": 72,
+    "status_code": 200
+  },
+  {
     "POST": "http://1.2.3.4/volumes",
     "response": {
         "volume": {
             "id": "12345abcde"
         }
     },
-    "sequence_number": 72,
+    "sequence_number": 73,
     "status_code": 202
   },
   {
     "GET": "http://1.2.3.4/volumes/12345abcde",
-    "sequence_number": 73,
+    "sequence_number": 74,
     "status_code": 404
   },
   {
@@ -125,7 +193,7 @@
         "name": "somename"
         }
     },
-    "sequence_number": 74,
+    "sequence_number": 75,
     "status_code": 200
   },
   {
@@ -152,7 +220,7 @@
         "name": "somename"
         }
     },
-    "sequence_number": 74,
+    "sequence_number": 78,
     "status_code": 200
   },
   {
