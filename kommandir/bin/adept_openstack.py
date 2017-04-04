@@ -19,9 +19,9 @@ import sys
 import os
 import os.path
 import logging
-import subprocess
 import time
 import argparse
+import subprocess
 from base64 import b64encode
 
 # Operation is discovered by symlink name used to execute script
@@ -47,22 +47,58 @@ os_client_config = ValueError  # pylint: disable=C0103
 
 # Lock-down versions of os-client-config and all dependencies for stability
 PIP_REQUIREMENTS = [
-    'os-client-config==1.21.1',
-    'appdirs==1.4.2',
-    'iso8601==0.1.11',
-    'keystoneauth1==2.18.0',
-    'pbr==1.10.0',
-    'positional==1.1.1',
-    'PyYAML==3.12',
-    'requests==2.13.0',
-    'requestsexceptions==1.1.3',
-    'six==1.10.0',
-    'stevedore==1.20.0',
-    'wrapt==1.10.8']
+    "appdirs==1.4.3",
+    "Babel==2.4.0",
+    "cliff==2.5.0",
+    "cmd2==0.7.0",
+    "debtcollector==1.13.0",
+    "deprecation==1.0",
+    "funcsigs==1.0.2",
+    "functools32==3.2.3.post2",
+    "iso8601==0.1.11",
+    "jsonpatch==1.15",
+    "jsonpointer==1.10",
+    "jsonschema==2.6.0",
+    "keystoneauth1==2.19.0",
+    "monotonic==1.3",
+    "msgpack-python==0.4.7",
+    "netaddr==0.7.19",
+    "netifaces==0.10.5",
+    "openstacksdk==0.9.14",
+    "os-client-config==1.26.0",
+    "osc-lib==1.3.0",
+    "oslo.config==3.24.0",
+    "oslo.i18n==3.15.0",
+    "oslo.serialization==2.18.0",
+    "oslo.utils==3.25.0",
+    "packaging==16.8",
+    "pbr==2.0.0",
+    "positional==1.1.1",
+    "prettytable==0.7.2",
+    "pyparsing==2.2.0",
+    "python-cinderclient==2.0.1",
+    "python-glanceclient==2.6.0",
+    "python-keystoneclient==3.10.0",
+    "python-novaclient==7.1.0",
+    "python-openstackclient==3.9.0",
+    "pytz==2017.2",
+    "PyYAML==3.12",
+    "requests==2.13.0",
+    "requestsexceptions==1.2.0",
+    "rfc3986==0.4.1",
+    "simplejson==3.10.0",
+    "six==1.10.0",
+    "stevedore==1.21.0",
+    "unicodecsv==0.14.1",
+    "warlock==1.3.0",
+    "wrapt==1.10.10"]
+
 # No C/C++ compiler is available in this virtualenv
 PIP_ONLY_BINARY = [':all:']
 # These must be compiled, but don't require C/C++
-PIP_NO_BINARY = ['wrapt', 'PyYAML', 'positional']
+PIP_NO_BINARY = ['wrapt', 'PyYAML', 'positional', 'warlock',
+                 'PrettyTable', 'cmd2', 'unicodecsv', 'simplejson',
+                 'netifaces', 'deprecation', 'functools32']
 
 # Exit code to return when --help output is displayed (for unitesting)
 HELP_EXIT_CODE = 127
@@ -345,7 +381,7 @@ class TimeoutAction(object):
     ABC callable, raises an exception on timeout, or returns non-None value of done()
     """
 
-    sleep = 0.5  # Sleep time per iteration, avoids busy-waiting.
+    sleep = 1  # Sleep time per iteration, avoids busy-waiting.
     timeout = DEFAULT_TIMEOUT  # (seconds)
     time_out_at = None  # absolute
     timeout_exception = RuntimeError
@@ -394,6 +430,8 @@ class TimeoutDelete(TimeoutAction):
     :raises ValueError: If more than one server with name is found
     """
 
+    sleep = 2  # Deleting takes a while
+
     def __init__(self, server_id):
         self.os_rest = OpenstackREST()
         self.os_rest.server_delete(uuid=server_id)
@@ -403,7 +441,7 @@ class TimeoutDelete(TimeoutAction):
         """Return remaining ids when server_id not found, None if still present."""
         server_ids = self.os_rest.server_list(key='id')
         if server_id in server_ids:
-            logging.info("    Deleting...")
+            logging.info("    Deleting %s", server_id)
             return None
         else:
             logging.info("Confirmed VM %s does not exist", server_id)
@@ -413,7 +451,7 @@ class TimeoutDelete(TimeoutAction):
 class TimeoutCreate(TimeoutAction):
     """Helper class to ensure server creation and state within timeout window"""
 
-    sleep = 1
+    sleep = 2  # Creating takes a while
 
     POWERSTATES = {
         0: 'NOSTATE',
@@ -484,6 +522,11 @@ class TimeoutCreate(TimeoutAction):
             imageRef=image_details['id'],
             user_data=b64encode(userdata)
         )
+
+        # Immediatly bail out if somehow another server exists with name
+        if self.os_rest.server_list().count(name) > 1:
+            raise RuntimeError("More than one server %s found during creation", name)
+
         logging.info("Submitting creation request for %s", name)
         self.os_rest.compute_request('/servers', 'server',
                                      'post', post_json=dict(server=server_json))
@@ -502,7 +545,7 @@ class TimeoutCreate(TimeoutAction):
         vm_state = server_details['OS-EXT-STS:vm_state']
         power_state = self.POWERSTATES.get(server_details['OS-EXT-STS:power_state'],
                                            'UNKNOWN')
-        logging.info("     %s: %s, power %s", server_id, vm_state, power_state)
+        logging.info("     id: %s: %s, power %s", server_id, vm_state, power_state)
         self.os_rest.raise_if(power_state == 'UNKNOWN',
                               RuntimeError,
                               "Got unknown power-state '%s' from response JSON"
@@ -901,45 +944,6 @@ def parse_args(argv, operation='help'):
     return dargs
 
 
-def pip_opt_arg(option, arg_list, delim=','):
-    """
-    If arg_list is non-empty, return option string with args separated by delim.
-    """
-    if arg_list:
-        if option:
-            return '%s %s' % (option, delim.join(arg_list))
-        else:
-            return '%s' % delim.join(arg_list)
-    else:
-        return ''
-
-
-def activate_virtualenv():
-    """
-    Setup and use a virtualenv from $WORKSPACE with required dependencies
-    """
-    shell = lambda cmd: subprocess.check_call(cmd, close_fds=True, shell=True,
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.STDOUT)
-    venvdir = os.path.join(os.environ['WORKSPACE'], '.virtualenv')
-    logging.info("Setting up python virtual environment under %s", venvdir)
-    if not os.path.isdir(venvdir):
-        shell('virtualenv -p /usr/bin/python2.7 %s' % venvdir)
-    # Setup dependencies in venvdir to keep host dependencies low
-    activate_this = os.path.join(venvdir, 'bin', 'activate_this.py')
-    logging.debug("Activating python virtual environment")
-    execfile(activate_this, dict(__file__=activate_this))
-    logging.info("Upgrading pip (inside virtual environment)")
-    shell('pip install --upgrade pip')
-    logging.info("Installing dependencies (inside virtual environment)")
-    shell('pip install %s %s %s'
-          % (pip_opt_arg('--only-binary', PIP_ONLY_BINARY),
-             pip_opt_arg('--no-binary', PIP_NO_BINARY),
-             pip_opt_arg('', PIP_REQUIREMENTS, ' ')))
-    logging.info("Reactivating python virtual environment")
-    execfile(activate_this, dict(__file__=activate_this))
-
-
 def main(argv, service_sessions):
     """
     Contains all primary calls for script for easier unit-testing
@@ -964,7 +968,7 @@ def main(argv, service_sessions):
         except IndexError, xcept:
             # Not an error (yet), will try creating VM next
             logging.warning("Failed to find existing VM: %s.", dargs['name'])
-            logging.debug(str(xcept))
+            logging.debug("%s: %s", xcept.__class__.__name__, str(xcept))
             try:
                 dargs = parse_args(argv, 'create')
                 OpenstackREST(service_sessions)
@@ -1006,11 +1010,53 @@ def api_debug_dump():
     prefix = basename.split('.', 1)[0]
     filepath = os.path.join(os.environ['WORKSPACE'], '.virtualenv',
                             '%s_api_responses.json' % prefix)
-    logging.info("Recording all response JSONs into: %s", filepath)
     # Don't fail main operations b/c missing module
     import json as simplejson
     with open(filepath, 'wb') as debugf:
         simplejson.dump(lines, debugf, indent=2, sort_keys=True)
+    logging.info("Recorded all response JSONs into: %s", filepath)
+
+
+def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
+    """
+    Create, activate, and install isolated python virtual environment
+
+    :param namespace: Variable namespace to use, e.g. ``globals()``
+    :param venvdir: Directory path to contain virtual environment and packages
+    :param requirements: List of pip packages and optionally, version requirements.
+    :param onlybin: List of pip packages to only install pre-built binaries or
+                    magic item ':all:' wildcard (overriden by ``nobin``)
+    :param nobin: List of pip packages to build and install (overrides onlybin)
+    """
+
+    logging.info("Setting up python virtual environment under %s", venvdir)
+    virtualenv = __import__('virtualenv', namespace)
+    virtualenv.create_environment(venvdir, site_packages=False)
+
+    logging.debug("Activating python virtual environment in %s", venvdir)
+    # activate_this checks __file__
+    venv_bindir = os.path.join(venvdir, 'bin')
+    old_file = namespace['__file__']
+    namespace['__file__'] = os.path.join(venv_bindir, 'activate_this.py')
+    execfile(__file__, namespace, namespace)
+    namespace['__file__'] = old_file
+    os.environ['VIRTUAL_ENV'] = venvdir  # Activation doesn't set this for some reason
+
+    # Pip doesn't work well when imported as a module in this use-case.
+    # Executing it under a shell also allows hiding it's stdout/stderr
+    # unless there's a problem.
+    shell = lambda cmd: subprocess.check_call(os.path.join(venv_bindir, cmd),
+                                              close_fds=True, shell=True,
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.STDOUT)
+    logging.info("Upgrading pip in %s", venv_bindir)
+    shell('pip install --upgrade pip')
+    logging.info("Installing packages in %s/lib/python2.7/site-packages/", venvdir)
+    pargs = ['pip', 'install']
+    pargs += ['--only-binary', ','.join(onlybin)]
+    pargs += ['--no-binary', ','.join(nobin)]
+    pargs += requirements
+    shell(' '.join(pargs))
 
 
 if __name__ == '__main__':
@@ -1021,20 +1067,39 @@ if __name__ == '__main__':
     else:
         # Lower to INFO level and higher for general details
         LOGGER.setLevel(logging.INFO)
-    del LOGGER  # no longer needed
+    del LOGGER # keep global namespace clean
+
     # N/B: Any/All names used here are in the global scope
     # pylint: disable=C0103
-    if 'WORKSPACE' not in os.environ:
+    workspace = os.environ.get('WORKSPACE')
+    if workspace is None:
         raise RuntimeError("Environment variable WORKSPACE is not set,"
                            " it must be a temporary, writeable directory.")
 
-    activate_virtualenv()
-    # Import module from w/in virtual environment into global namespace
-    os_client_config = __import__('os_client_config', globals(), locals())
+    # pip and os-client-config behavior depends on these
+    os.environ['HOME'] = workspace
+    os.chdir(workspace)
 
-    service_names = os_client_config.get_config().get_services()
+    activate_and_setup(globals(),
+                       os.path.join(workspace, '.virtualenv'),
+                       PIP_REQUIREMENTS,
+                       PIP_ONLY_BINARY,
+                       PIP_NO_BINARY)
+
+    logging.info("Loading openstack client config module")
+    os_client_config = __import__('os_client_config')
+
+    # OpenStackConfig() obliterates os.environ for security reasons
+    original_environ = os.environ.copy()
+    osc = os_client_config.OpenStackConfig()
+    clouds = osc.get_cloud_names()
+    os_cloud_name = original_environ.get('OS_CLOUD_NAME', osc.get_cloud_names()[0])
+
+    logging.info("Using cloud '%s' from %s", os_cloud_name, osc.config_filename)
+    cloud = osc.get_one_cloud(os_cloud_name)
+    service_names = cloud.get_services()
     logging.debug("Initializing openstack services: %s", service_names)
-    sessions = dict([(svc, os_client_config.make_rest_client(svc))
+    sessions = dict([(svc, cloud.get_session_client(svc))
                      for svc in service_names])
     main(sys.argv, sessions)
 
