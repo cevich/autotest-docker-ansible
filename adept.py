@@ -737,6 +737,7 @@ class Variable(ActionBase):
     # Private buffers, don't use
     name = None
     _value = None
+    _default = None
     _from_env = None
     _from_file = False
 
@@ -774,7 +775,7 @@ class Variable(ActionBase):
         self.name = name.strip()
         if self.global_vars is None or not isinstance(self.global_vars, dict):
             self.yamlerr('initializing', 'encountered invalid global state')
-        if value and from_env or value and from_env or value and from_file:
+        if value is not None and (from_env is not None or from_file is not None):
             self.yamlerr('initializing',
                          'only one of value(%s), from_env(%s), or '
                          'from_file(%s) may be set for %s'
@@ -782,7 +783,7 @@ class Variable(ActionBase):
         if value is not None:
             self._value = value.strip()
         elif default is not None:
-            self._value = default.strip()
+            self._default = default.strip()
         if from_env is not None:
             self._from_env = from_env.strip()
         if from_file is not None:
@@ -800,8 +801,8 @@ class Variable(ActionBase):
                                        self._from_file), 'rb') as from_file:
                     value = from_file.read()
             except IOError, errr:
-                if self._value is not None:
-                    value = self._value  # default
+                if self._default is not None:
+                    value = self._default  # default
                     # dump default into missing file
                     with open(self.sub_env(envars, self._from_file),
                               'wb') as to_file:
@@ -811,15 +812,16 @@ class Variable(ActionBase):
                                  'reading from file %s: %s'
                                  % (self._from_file, errr.strerror))
         elif self._from_env:
-            if self._from_env not in envars and self._value is None:
+            if self._from_env not in os.environ and self._default is None:
                 self.yamlerr('executing',
                              'environment variable %s does not exist '
                              'in environment' % self._from_env)
-            elif self._value is not None:
-                value = self._value  # default
+            elif self._default is not None:
+                value = self._default  # default
             else:
-                value = envars[self._from_env].strip()
-            if value == '':
+                value = os.environ[self._from_env].strip()
+            # Don't allow empty values from environment, only empty defaults
+            if self._default is None and value == '':
                 self.yamlerr('executing',
                              'environment variable %s is empty'
                              % self._from_env)
