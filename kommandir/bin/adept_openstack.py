@@ -22,7 +22,11 @@ import logging
 import time
 import argparse
 import subprocess
+from tempfile import mkdtemp
 from base64 import b64encode
+import shutil
+import fcntl
+import virtualenv
 
 # Operation is discovered by symlink name used to execute script
 ONLY_CREATE_NAME = 'openstack_exclusive_create.py'
@@ -1016,6 +1020,29 @@ def api_debug_dump():
     logging.info("Recorded all response JSONs into: %s", filepath)
 
 
+def _pip_upgrade_install(venvdir, requirements, onlybin, nobin):
+    bindir = os.path.join(venvdir, 'bin')
+    environment = os.environ.copy()
+    # Fool pip into only touching files under this
+    environment['VIRTUAL_ENV'] = venvdir
+    # Pip doesn't work well when imported as a module in this use-case.
+    # Executing it under a shell also allows hiding it's stdout/stderr
+    # unless there's a problem.
+    shell = lambda cmd: subprocess.check_call(os.path.join(bindir, cmd),
+                                              close_fds=True, shell=True,
+                                              env=environment,
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.STDOUT)
+    logging.info("Upgrading pip.")
+    shell('pip install --upgrade pip')
+    logging.info("Installing packages.")
+    pargs = ['pip', 'install']
+    pargs += ['--only-binary', ','.join(onlybin)]
+    pargs += ['--no-binary', ','.join(nobin)]
+    pargs += requirements
+    shell(' '.join(pargs))
+
+
 def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
     """
     Create, activate, and install isolated python virtual environment
@@ -1028,34 +1055,39 @@ def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
     :param nobin: List of pip packages to build and install (overrides onlybin)
     """
 
+    # They do exactly what they say pylint: disable=C0111
+    def lock_file(filename, mode=fcntl.LOCK_EX):
+        lockfile = open(filename, "w")
+        fcntl.lockf(lockfile, mode)
+        return lockfile
+
+    def unlock_file(lockfile):
+        fcntl.lockf(lockfile, fcntl.LOCK_UN)
+        lockfile.close()
+
     logging.info("Setting up python virtual environment under %s", venvdir)
-    virtualenv = __import__('virtualenv', namespace)
-    virtualenv.create_environment(venvdir, site_packages=False)
+    # Only one concurrent process should do _pip_upgrade_install()
+    lockfile = lock_file("%s_lock" % venvdir)
+    try:
+        if os.path.isdir(venvdir):
+            logging.info("Found existing virtual environment")
+        else:
+            logging.info("Creating new virtual environment")
+            virtualenv.create_environment(venvdir, site_packages=False)
+            _pip_upgrade_install(venvdir, requirements, onlybin, nobin)
+    except:
+        shutil.rmtree(venvdir, ignore_errors=True)
+        raise
+    finally:
+        unlock_file(lockfile)
 
-    logging.debug("Activating python virtual environment in %s", venvdir)
-    # activate_this checks __file__
-    venv_bindir = os.path.join(venvdir, 'bin')
-    old_file = namespace['__file__']
-    namespace['__file__'] = os.path.join(venv_bindir, 'activate_this.py')
-    execfile(__file__, namespace, namespace)
-    namespace['__file__'] = old_file
-    os.environ['VIRTUAL_ENV'] = venvdir  # Activation doesn't set this for some reason
-
-    # Pip doesn't work well when imported as a module in this use-case.
-    # Executing it under a shell also allows hiding it's stdout/stderr
-    # unless there's a problem.
-    shell = lambda cmd: subprocess.check_call(os.path.join(venv_bindir, cmd),
-                                              close_fds=True, shell=True,
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.STDOUT)
-    logging.info("Upgrading pip in %s", venv_bindir)
-    shell('pip install --upgrade pip')
-    logging.info("Installing packages in %s/lib/python2.7/site-packages/", venvdir)
-    pargs = ['pip', 'install']
-    pargs += ['--only-binary', ','.join(onlybin)]
-    pargs += ['--no-binary', ','.join(nobin)]
-    pargs += requirements
-    shell(' '.join(pargs))
+    logging.debug("Activating python virtual environment from %s", venvdir)
+    old_file = namespace['__file__']  # activate_this checks __file__
+    try:
+        namespace['__file__'] = os.path.join(venvdir, 'bin', 'activate_this.py')
+        execfile(__file__, namespace, namespace)
+    finally:
+        namespace['__file__'] = old_file
 
 
 if __name__ == '__main__':
@@ -1063,9 +1095,11 @@ if __name__ == '__main__':
     if [arg for arg in sys.argv if arg == '-v' or arg == '--verbose']:
         # Lower to DEBUG for massively detailed output
         LOGGER.setLevel(logging.DEBUG)
+        VERBOSE = True
     else:
         # Lower to INFO level and higher for general details
         LOGGER.setLevel(logging.INFO)
+        VERBOSE = False
     del LOGGER # keep global namespace clean
 
     # N/B: Any/All names used here are in the global scope
@@ -1100,11 +1134,10 @@ if __name__ == '__main__':
     logging.debug("Initializing openstack services: %s", service_names)
     sessions = dict([(svc, cloud.get_session_client(svc))
                      for svc in service_names])
-    main(sys.argv, sessions)
-
     try:
-        api_debug_dump()
-    # This is just for debugging, ignore all errors
-    # pylint: disable=W0702
-    except:
-        pass
+        main(sys.argv, sessions)
+        if VERBOSE:
+            api_debug_dump()
+    finally:
+        if VERBOSE:
+            api_debug_dump()
