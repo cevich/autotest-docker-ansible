@@ -801,6 +801,8 @@ class Variable(ActionBase):
         self.global_vars[self.name] = value.strip()
         return 0
 
+# TODO: Add import class
+# TODO: Add playbook-variable class
 
 # Associate node name from yaml to class object for action_class()
 ACTIONMAP = {'command': Command,
