@@ -640,15 +640,10 @@ class TimeoutAttachVolume(TimeoutAction):
         """
         Return volume_id if attachment complete or None if not
         """
-        try:
-            volume_details = self.os_rest.volume(uuid=volume_id)
-        except ValueError:   # Doesn't exist yet
-            return None
-        attachments = [a['id'] for a in volume_details['attachments']]
-        attached_to_server = server_id in attachments
-        status = volume_details['status']
-        logging.info("     %s: status %s (attached %s)",
-                     volume_id, status, attached_to_server)
+        attachments = self.os_rest.attachments(uuid=server_id)
+        attached_to_server = volume_id in attachments
+        logging.info("     %s: attached to %s: %s)",
+                     volume_id, server_id, attached_to_server)
         if not attached_to_server and not self.attach_requested:
             volumeattachment = dict(volumeId=volume_id)
             self.os_rest.compute_request('/servers/%s/os-volume_attachments' % server_id,
@@ -657,7 +652,7 @@ class TimeoutAttachVolume(TimeoutAction):
             self.attach_requested = True
             return None
         elif attached_to_server:
-            return volume_details['id']
+            return volume_id
         else:
             return None
 

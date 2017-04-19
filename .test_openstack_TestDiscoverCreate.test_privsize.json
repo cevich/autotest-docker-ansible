@@ -191,22 +191,15 @@
     "status_code": 202
   },
   {
-    "GET": "http://1.2.3.4/volumes/12345abcde",
-    "sequence_number": 74,
-    "status_code": 404
-  },
-  {
-    "GET": "http://1.2.3.4/volumes/12345abcde",
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
-      "volume": {
-        "attachments": [],
-        "id": "12345abcde",
-        "size": 11000000000,
-        "status": "availble",
-        "name": "somename"
-        }
+      "server": {
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": []
+      }
     },
-    "sequence_number": 75,
+    "sequence_number": 74,
     "status_code": 200
   },
   {
@@ -223,17 +216,15 @@
     "status_code": 202
   },
   {
-    "GET": "http://1.2.3.4/volumes/12345abcde",
+    "GET": "http://1.2.3.4/servers/102f1788-3b0a-4a37-aecc-547996c1db08",
     "response": {
-      "volume": {
-        "attachments": [{"id":"102f1788-3b0a-4a37-aecc-547996c1db08"}],
-        "id": "12345abcde",
-        "size": 11000000000,
-        "status": "in-use",
-        "name": "somename"
-        }
+      "server": {
+        "id": "102f1788-3b0a-4a37-aecc-547996c1db08",
+        "name": "foobar",
+        "os-extended-volumes:volumes_attached": [{"id": "12345abcde"}]
+      }
     },
-    "sequence_number": 78,
+    "sequence_number": 77,
     "status_code": 200
   },
   {
