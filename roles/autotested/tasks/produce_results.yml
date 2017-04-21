@@ -17,11 +17,19 @@
         autotest_execution is defined and
         autotest_execution | success
 
+- name: buffer environment for results scripts
+  set_fact:
+    # Recycle temp var
+    result:
+        AUTOTEST_PATH: "{{ autotest_dest_dir }}"
+        PYTHONPATH: "{{ autotest_dest_dir | dirname }}"
+
 # Extract a name unique to this run, but common across runs of same job
 - name: Attempt to run alternate results2junit
   shell: "{{ autotest_docker_path }}/results2junit --name {{ peon_metadata.name }}-{{ peon_metadata.version }} results/default"
   args:
     chdir: "{{ autotest_dest_dir }}/client"
+  environment: "{{ result }}"
   register: results2junit
   ignore_errors: true
   when: peon_metadata is defined and
@@ -34,6 +42,7 @@
   shell: tools/results2junit.py results/default > {{ autotest_dest_dir }}/client/results/default/results.junit
   args:
     chdir: "{{ autotest_dest_dir }}/client"
+  environment: "{{ result }}"
   register: results2junit
   ignore_errors: true
   when: docker_autotest.execute and
