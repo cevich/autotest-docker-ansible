@@ -55,7 +55,8 @@ adept_openstack:
         ssh_pwauth: True
         # Import all ssh_authorized_keys (below) into these users
         ssh_import_id: [root]
-        # public keys to import to users (above)
+        # This should be a yaml-list of public keys to use in root's
+        # authorized_keys file.  One key per list item.
         ssh_authorized_keys: "{{ _private_ssh_authorized_keys | list }}"
         users:
             # Prevent creating the default, generic user

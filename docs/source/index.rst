@@ -13,6 +13,9 @@
 Additional Documentation
 =========================
 
-Autotest documentation is available at: http://autotest.readthedocs.org/en/latest/
+Autotest documentation: http://autotest.readthedocs.org/en/latest/
+Docker Autotest documentation: http://docker-autotest.readthedocs.org/en/latest/
+ReStructuredText quick reference: http://docutils.sourceforge.net/docs/user/rst/quickref.html
 
-Docker Autotest documentation is available at: http://docker-autotest.readthedocs.org/en/latest/
+.. include:: README.rst
+   :start-after: The quickstart section begins next
