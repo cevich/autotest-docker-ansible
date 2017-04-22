@@ -18,8 +18,10 @@ exclude = example,subexample,pretest_example,intratest_example,
           posttest_example,
           docker_cli/run_volumes,
 {# Atomic host does not have git #}
+{# Atomic host has trimmed down logging #}
           {% if is_atomic %}
           docker_cli/build/git_path,
+          docker_cli/syslog
 {% endif %}
 {% if not is_enterprise %}
           {# We never test the RHEL base-image on Fedora #}
