@@ -14,7 +14,8 @@ Prerequisites
 *  Red Hat based host (RHEL_, CentOS_, Fedora_, etc), subscribed and fully updated.
 *  Python 2.7
 *  PyYAML 3.10
-*  Ansible_ 2.1 or later
+*  Ansible_ 2.1 or later (up to but excluding 2.3)
+*  Ansible_ 2.2 is required if the Kommandir node will be local (i.e. "nocloud")
 *  Root access **not** required
 
 Openstack support:
@@ -48,13 +49,19 @@ Quickstart
     $ ./adept.py run $WORKSPACE exekutir.xn
     $ ./adept.py cleanup $WORKSPACE exekutir.xn
 
-**Note:** To see select debugging output (variable values, loop
-items, etc), here and there, append ``-e adept_debug=true`` onto
-any of the three ``adept.py`` lines above.  This will show
-only the details we thought important enough to include.  Instead
-(or in addition) you may also add one or more ``-v`` options,
-to place Ansible itself into verbose mode.  Un/fortunately,
-this means you'll see details about ***ALL*** tasks, useful or not.
+**Notes:**
+
+#. To see select debugging output (select variable values and infos),
+   append ``-e adept_debug=true`` onto any of the ``adept.py`` lines above.
+
+#. Setting ``-e adept_debug=true`` will prevent roles in the cleanup context
+   from removing any leftover files in the workspaces.
+
+#. To see massive amounts of ugly details, append one or more ``--verbose``,
+   options onto any of the ``adept.py`` lines above.
+
+#. To run a different job, simply override the path on __each__ of the
+   ``adept.py`` lines above.  e.g. ``./adept.py ... -e job_path=jobs/basic``
 
 .. The current documentation section begins next
 

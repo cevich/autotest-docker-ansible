@@ -68,6 +68,7 @@
 
 # Support pass-through of openstack env. vars if they're set.
 # These will be preferred over clouds.yml, so only use one method.
+# TODO: kommandir/inventory/group_vars/openstack cloud_environment needs tweaking
 - variable: {"name":"OS_AUTH_URL","from_env":"OS_AUTH_URL","default":""}
 - variable: {"name":"OS_TENANT_ID","from_env":"OS_TENANT_ID","default":""}
 - variable: {"name":"OS_TENANT_NAME","from_env":"OS_TENANT_NAME","default":""}
