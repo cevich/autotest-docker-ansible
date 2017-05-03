@@ -1,57 +1,64 @@
 ---
 
-# Depends:
-#   disk_device: path to device node to operate on
-#   parted_cmds: string of commands and options to pass into parted
+- assert:
+    that:
+        - 'empty is defined'
+        - 'disk_device | default() not in empty'
+        - 'parted_cmds | default() not in empty'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  with_items: ["disk_device","parted_cmds"]
+  when: adept_debug
+
+- name: Current partition table is stored
+  # Fails if no disk label exists, don't display this, catch in 'fail' below
+  shell: "/usr/sbin/sfdisk --dump {{ disk_device }} || /bin/true"
+  register: sfdisk_before
+  ignore_errors: true
+  changed_when: False
+
+- debug:
+    var: sfdisk_before
+  when: adept_debug
+
+- name: Missing/corrupt partition table is okay
+  assert:
+    msg: "The word 'Success' must appear in failed sfdisk --dump output"
+    that:
+        sfdisk_before.stdout | search('Success') or
+        sfdisk_before.stderr | search('Success')
+  when: sfdisk_before | failed
 
 - block:
 
-    - name: Current partition table is stored
+    - name: parted command is executed
+      shell: "/usr/sbin/parted --script {{ disk_device }} {{ parted_cmds }}"
+      register: parted
+
+  rescue:
+    - debug:
+        var: parted
+      when: adept_debug
+
+    - name: post-fail partition table is stored
       command: "/usr/sbin/sfdisk --dump {{ disk_device }}"
-      register: sfdisk_before
-      # Fails if no disk label exists, caught by 'fail' module below
-      ignore_errors: true
+      register: sfdisk_rescue
       changed_when: False
 
-    - name: Missing/corrupt partition table is okay
-      assert:
-        msg: "The word 'Success' must appear in failed sfdisk --dump output"
-        that:
-            sfdisk_before.stdout | search('Success') or
-            sfdisk_before.stderr | search('Success')
-      when: sfdisk_before | failed
+    - name: Original partition table is recovered if different from original
+      shell: "/usr/bin/echo {{ sfdisk_before.stdout | quote }} | /usr/sbin/sfdisk {{ disk_device }}"
+      when: sfdisk_before | success and
+            sfdisk_before.stdout != sfdisk_rescue.stdout
 
-    - block:
+  always:
+    - name: Final partition table is stored
+      command: "/usr/sbin/sfdisk --dump {{ disk_device }}"
+      register: sfdisk_after
+      changed_when: False
 
-        - name: parted command is executed
-          shell: "/usr/sbin/parted --script {{
-                    disk_device }} {{ parted_cmds }}"
-          register: parted
-
-      rescue:
-        - debug: var=parted
-
-        - name: post-fail partition table is stored
-          command: "/usr/sbin/sfdisk --dump {{ disk_device }}"
-          register: sfdisk_rescue
-          changed_when: False
-
-        - name: Original partition table is recovered
-          shell: "/usr/bin/echo {{ sfdisk_before.stdout |
-                    quote }} | /usr/sbin/sfdisk {{ disk_device }}"
-          when: sfdisk_before.stdout != sfdisk_rescue.stdout
-
-      always:
-        - name: Final partition table is stored
-          command: "/usr/sbin/sfdisk --dump {{ disk_device }}"
-          register: sfdisk_after
-          changed_when: False
-
-      when: parted_cmds is defined and parted_cmds != None and parted_cmds != ''
-
-    - name: system needs reboot when partition table changed
-      set_fact:
-        needs_reboot: True
-      when: sfdisk_before.stdout != sfdisk_after.stdout
-
-  when: disk_device is defined and disk_device != None and disk_device != ''
+- name: system needs reboot when partition table changed
+  set_fact:
+    needs_reboot: True
+  when: sfdisk_before.stdout != sfdisk_after.stdout

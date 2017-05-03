@@ -1,36 +1,32 @@
 ---
 
-# Depends:
-#   - no_log_synchronize
-#   - ...others....
+# N/B: This is running inside block's "always" task list, everything must pass
 
-# N/B: Running inside block's "always" task list, everything must pass
+- assert:
+    that:
+        - 'autotest_dest_dir is defined'
+        - 'no_log_synchronize | default() not in empty'
+        - 'autotest_docker_path is defined'
 
-- name: Results sub-directory is defined
-  set_fact:
-    result: "{{ workspace }}/results/{{ inventory_hostname }}"
-
-- name: Ensure results sub-directory exists
-  file:
-  args:
-    path: "{{ result }}"
-    state: directory
-  ignore_errors: true
-  delegate_to: localhost
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["autotest_dest_dir", "no_log_synchronize", "autotest_docker_path"]
 
 - name: Collect autotest results
   synchronize:
     mode: pull
     src: "{{ autotest_dest_dir }}/client/results/default/"
-    dest: "{{ result }}"
+    dest: "{{ workspace }}/results/{{ inventory_hostname }}"
   ignore_errors: true
-  no_log: '{{ no_log_synchronize | default(true) }}'
+  #no_log: '{{ no_log_synchronize }}'
 
 - name: Collect Docker Autotest customized config
   synchronize:
     # The test VM is the SOURCE, and local system is destination
     mode: pull
     src: "{{ autotest_docker_path }}/config_custom"
-    dest: "{{ result }}"
+    dest: "{{ workspace }}/results/{{ inventory_hostname }}"
   ignore_errors: true
-  no_log: '{{ no_log_synchronize | default(true) }}'
+  no_log: '{{ no_log_synchronize }}'

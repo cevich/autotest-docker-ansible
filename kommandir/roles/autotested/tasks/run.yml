@@ -1,5 +1,10 @@
 ---
 
+- assert:
+    that:
+        - 'autotest_docker_path is defined'
+        - 'autotest_dest_dir is defined'
+
 - block:
 
     - name: Execute Docker autotest
@@ -7,7 +12,7 @@
       args:
         chdir: "{{ autotest_docker_path }}"
       register: autotest_execution
-      async: "{{ (docker_autotest_timeout | default(240)) * 60 }}"
+      async: "{{ (docker_autotest_timeout | default(240)) * 61 }}"
       poll: 60
       # Any Autotest failures will eventually be reflected as missing results
       ignore_errors: True

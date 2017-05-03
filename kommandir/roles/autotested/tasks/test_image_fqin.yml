@@ -1,24 +1,34 @@
 ---
 
+- assert:
+    that:
+        - 'docker_autotest is defined'
+
 - name: Docker Autotest test image known in fqin format
   set_fact:
     # Must be all one string. Host, User, and Tag are optional.
     test_image_fqin: >
-        {%- if docker_autotest.test_image.host is defined and
-               docker_autotest.test_image.host not in ['', None]
-        %}{{ docker_autotest.test_image.host
-        }}/ {%- endif
-        %} {%- if docker_autotest.test_image.user is defined and
-                  docker_autotest.test_image.user not in ['', None]
-        %}{{ docker_autotest.test_image.user
-        }}/ {%- endif
-        %}{{ docker_autotest.test_image.name
-        }} {%- if docker_autotest.test_image.tag is defined and
-                  docker_autotest.test_image.tag not in ['', None]
-        %}:{{ docker_autotest.test_image.tag }}{% endif %}
+      {%- if docker_autotest.test_image.host | default() not in empty -%}\
+          {{ docker_autotest.test_image.host }}/\
+      {%- endif -%}\
+      \
+      {%- if docker_autotest.test_image.user | default() not in empty -%}\
+          {{ docker_autotest.test_image.user }}/\
+      {%- endif -%}\
+      \
+      {{ docker_autotest.test_image.name }}\
+      \
+      {%- if docker_autotest.test_image.tag | default() not in empty -%}\
+        :{{ docker_autotest.test_image.tag }}\
+      {%- endif -%}
   when: docker_autotest.test_image is defined and
-        docker_autotest.test_image.name is defined and
-        docker_autotest.test_image.name not in ['', None]
+        docker_autotest.test_image.name | default() not in empty
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["docker_autotest", "test_image_fqin"]
 
 # Allows building a custom testing image from Dockerfile @ URL
 - name: Build Test Image
@@ -26,6 +36,10 @@
            --quiet
            --tag {{ test_image_fqin }}
            {{ docker_autotest.test_image.build_url }}
+  when: test_image_fqin is defined and result |failed and
+        docker_autotest.test_image.build_url | default() not in empty
+
+- name: Test image has been pulled
+  command: /usr/bin/docker pull {{ test_image_fqin }}
   when: test_image_fqin is defined and
-        docker_autotest.test_image.build_url is defined and
-        docker_autotest.test_image.build_url not in ['', None]
+        docker_autotest.test_image.build_url | default() not in empty

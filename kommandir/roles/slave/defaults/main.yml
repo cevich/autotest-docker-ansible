@@ -1,8 +1,0 @@
----
-
-# Force ansible colorized output to be always on
-ansible_force_color: True
-
-# Handy for debugging/development
-cleanup_facts: True
-cleanup_peon_set: True

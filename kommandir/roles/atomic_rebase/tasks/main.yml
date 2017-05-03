@@ -1,23 +1,23 @@
 ---
 
-# Depends:
-#   is_atomic
-#   ostree_remote:
-#       name
-#       spec
-#       url
-#       extra
-# Registers:
-#   rpms_updated: boolean
-#   needs_reboot: boolean
+- assert:
+    that:
+        - 'empty is defined'
+        - 'is_atomic'
+        - 'ostree_remote | default() not in empty'
+        - 'ostree_remote.name | default() not in empty'
+        - 'ostree_remote.url | default() not in empty'
+        - 'ostree_remote.spec | default() not in empty'
 
-- fail:
-    msg: "Attempt to apply the atomic_upgrade role onto a non-Atomic host"
-  when: not is_atomic
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["is_atomic","ostree_remote"]
 
 - name: remote already exists
   command: ostree remote list
-  register: remote_list
+  register: result
 
 - name: ostree command is executed
   command: >
@@ -26,7 +26,8 @@
                     {{ ostree_remote.extra | default('') }}
                     {{ ostree_remote.name }}
                     {{ ostree_remote.url }}
-  when: not (remote_list.stdout | search(ostree_remote.name))
+  # TODO: Add whitespace matching before/after ostree_remote.name?
+  when: not (result.stdout | search(ostree_remote.name))
 
 - name: current deployment origin refspec is known
   shell: >
@@ -35,21 +36,15 @@
     grep 'origin refspec: ' |
     cut -d: -f2 |
     tr -d [:blank:]
-  register: ostree_status
+  register: result
 
-- name: rebase to alternate remote
+- name: rebase to alternate remote if refspec name is different
   command: rpm-ostree rebase '{{ ostree_remote.name }}:{{ ostree_remote.spec }}'
   register: atomic_rebase
   changed_when: atomic_rebase.stdout | search('to start a reboot')
-  when: ostree_status.stdout != ostree_remote.name
+  when: result.stdout != ostree_remote.name
 
 - name: set flag when changes require reboot
   set_fact:
     needs_reboot: True
-    rpms_updated: True
-  when: atomic_rebase is defined and atomic_rebase | changed
-
-- name: set flag false when changes not made
-  set_fact:
-    rpms_updated: False
-  when: atomic_rebase is undefined
+  when: result | changed

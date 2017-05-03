@@ -1,12 +1,15 @@
 ---
 
+- assert:
+    that:
+        - '"subscribed" in group_names'
+
 - name: System is  unsubscribed
-  redhat_subscription:
-  args:
-    username: "{{ rhsm.username }}"
-    password: "{{ rhsm.password }}"
-    state: absent
+  shell: subscription-manager unregister | true
   register: result
-  until: result | success
-  retries: "{{ rhsm_retries }}"
-  delay: "{{ rhsm_delay }}"
+  ignore_errors: True
+
+- name: Result is displayed when adept_debug
+  debug:
+    var: "result"
+  when: adept_debug

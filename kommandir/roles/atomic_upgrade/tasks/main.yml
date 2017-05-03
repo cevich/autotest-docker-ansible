@@ -1,36 +1,41 @@
 ---
 
-# Depends:
-#   is_atomic
-# Registers:
-#   rpms_updated: boolean
-#   needs_reboot: boolean
+- assert:
+    that:
+        - 'empty is defined'
+        - 'is_atomic | default() not in empty'
+        - '"updated" in group_names'
 
-- fail:
-    msg: "Attempt to apply the atomic_upgrade role onto a non-Atomic host"
-  when: not is_atomic
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["is_atomic","updated"]
 
-- name: Record upgrade diff check output
+# This simplifies actually performing the update and examining results (below)
+- name: Atomic upgrade diff check output is buffered
   command: atomic host upgrade --check-diff
-  register: upgrade_check
+  register: result
   # 0 == Upgrade ready, applicable, & available.
   # 77 == No change
   # 1 == Error or no newer upgrade available
-  failed_when: upgrade_check.rc not in [0,77] and
-               not upgrade_check.stderr | search('older than current revision') and
-               not upgrade_check.stdout | search('No upgrade available.')
+  failed_when: result.rc not in [0,77] and
+               not result.stderr | search('older than current revision') and
+               not result.stdout | search('No upgrade available.')
   changed_when: False
 
-- name: Set _needs_upgrade flag False
-  set_fact:
-    _needs_upgrade: False
+- debug:
+    var: "result"
+  when: adept_debug
 
-- name: Set _needs_upgrade flag True when indicated by atomic diff
+- name: Set result True when an updated is needed as indicated by atomic diff (above)
   set_fact:
-    _needs_upgrade: True
-  when: upgrade_check.rc == 0
+    result: True
+  when: result.rc == 0
 
-- debug: var=upgrade_check
+- name: Set result False when an update is not needed
+  set_fact:
+    result: False
 
 - block:
 
@@ -40,35 +45,29 @@
 
     - name: Atomic host is updated to latest tree
       command: atomic host upgrade
-      register: atomic_host_upgrade
+      register: result
+      # Give oportunity for debugging
       ignore_errors: True
       # Default retries is 3 and timeout is 5
-      until: atomic_host_upgrade.rc is defined and atomic_host_upgrade.rc in [0,77]
+      until: result.rc is defined and result.rc in [0,77]
       # Depending on networking, this could take a while.
-      async: '{{ async_poll_timeout }}'
-      poll: 10
+      async: '{{ install_timeout }}'
+      poll: 5
 
-    - assert:
-        that:
-            - 'atomic_host_upgrade.rc is defined'
-            - 'atomic_host_upgrade.rc in [0,77]'
+    - debug:
+        var: "result"
+      when: adept_debug
+
+    - fail:
+      when: result.rc not in [0,77]
+
+    - name: System needs rebooting to activate changes
+      set_fact:
+        needs_reboot: True
 
   always:
 
     - name: Undo Workaround of old atomic command bug
       command: setenforce 1
 
-  when: _needs_upgrade
-
-- name: rpms_updated + needs_reboot are set on update
-  set_fact:
-    rpms_updated: True
-    needs_reboot: True
-  when: atomic_host_upgrade is defined and
-        atomic_host_upgrade | changed
-
-- name: rpms_updated is set false
-  set_fact:
-        # Leave needs_reboot state as-is, but rpms_updated flag safe to flip
-        rpms_updated: False
-  when: atomic_host_upgrade is undefined
+  when: result.rc == 0

@@ -1,7 +1,14 @@
 ---
 
-- debug: var=docker_autotest_timeout
-  when: docker_autotest_timeout is defined
+- assert:
+    that:
+        - 'autotest_docker_path is defined'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["autotest_docker_path", "docker_autotest_timeout"]
 
 - name: Control timeout set in terms of seconds
   lineinfile:

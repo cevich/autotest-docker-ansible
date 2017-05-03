@@ -1,0 +1,20 @@
+---
+
+cleanup_assertions:
+    - 'empty is defined'
+    - 'inventory_hostname == "kommandir"'
+    - 'workspace is defined'
+    - 'adept_debug in [True, False]'
+    - 'workspace_keep is defined'
+    - 'extra_workspace_keep is defined'
+    - 'cleanup_globs is defined'
+
+workspace_keep:
+    - "{{ workspace }}/results"
+    - "{{ workspace }}/inventory"
+    - "{{ workspace }}/kommandir_vars.yml"
+
+extra_workspace_keep: []
+
+# List of globs to remove (workspace/* if empty)
+cleanup_globs: []

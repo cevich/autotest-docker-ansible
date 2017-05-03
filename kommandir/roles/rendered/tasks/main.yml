@@ -14,7 +14,4 @@
     seuser: "{{ item.seuser | default(omit) }}"
     src: "{{ item.src | default(omit) }}"
     validate: "{{ item.validate | default(omit) }}"
-  with_items:
-    - '{{ rendered_templates }}'
-  when: rendered_templates is defined and
-        rendered_templates != []
+  with_items: '{{ rendered_templates | default([]) }}'

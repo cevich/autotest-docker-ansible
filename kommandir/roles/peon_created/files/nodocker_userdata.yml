@@ -1,0 +1,37 @@
+#cloud-config
+
+# Because I'm self-centered
+timezone: US/Eastern
+
+# We will configure our own filesystems/partitioning
+growpart:
+    mode: off
+
+# Don't add silly 'please login as' to .ssh/authorized_keys
+disable_root: false
+
+# Allow password auth in case it's needed
+ssh_pwauth: True
+
+# Import all ssh_authorized_keys (below) into these users
+ssh_import_id: [root]
+
+# public keys to import to users (above)
+# N/B: The value here is assumed to be substituted by
+#      user of this file.
+#      e.g. in python, given strings foo and bar:
+#           foo.format(auth_key_lines=bar)
+ssh_authorized_keys: {auth_key_lines}
+
+# Prevent creating the default, generic user
+users:
+   - name: root
+     primary-group: root
+     homedir: /root
+     system: true
+
+# For all hosts, ensure all on-boot storage manipulating services
+# are disabled, so playbooks can do their job
+bootcmd:
+    - cloud-init-per once instance systemctl disable docker
+    - cloud-init-per once instance systemctl disable docker-latest

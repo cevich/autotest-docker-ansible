@@ -1,0 +1,55 @@
+---
+
+################################################################
+# N/B: This may be running on an old (2.1)  version of ansible #
+################################################################
+
+# This needs to be configurable so role can be shared with kommandir
+- assert:
+    that: '{{ cleanup_assertions | default([]) }}'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["workspace_keep", "extra_workspace_keep", "cleanup_globs"]
+
+- name: The result variable lists 'workspace/*' when cleanup_globs is empty
+  set_fact:
+    result:
+        - '{{ workspace }}/*'
+  when: cleanup_globs | default() in empty
+
+- name: The result variable buffers the cleanup_globs variable
+  set_fact:
+    result: "{{ cleanup_globs }}"
+  when: not cleanup_globs | default() in empty
+
+- name: All workspace items matching result glob list are recursively found
+  find:
+    follow: True
+    hidden: True
+    paths:
+        - "{{ workspace }}"
+    patterns: "{{ result }}"
+    recurse: True
+  register: result
+
+- name: Result list formed without workspace or kommandir_workspace
+  set_fact:
+    result: '{{ result.files | map(attribute="path") | difference([workspace, kommandir_workspace]) }}'
+
+- name: Unnecessary items removed from workspace if not listed in workspace_keep
+  file:
+    path: "{{ item }}"
+    state: absent
+  when: not adept_debug and item | search(workspace | regex_escape())
+  # Can't easily do globbing, next best thing is to NOT delete
+  # things known to be useful later.
+  with_items: '{{ result | difference(workspace_keep | union(extra_workspace_keep)) }}'
+
+- name: Items that would have been removed are listed if adept_debug enabled
+  debug:
+    var: "item"
+  when: adept_debug
+  with_items: '{{ result | difference(workspace_keep | union(extra_workspace_keep)) }}'

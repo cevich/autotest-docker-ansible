@@ -1,6 +1,4 @@
 ---
 
-rpms_updated: False
-
-# Max time to poll for update/install results on remote host (seconds)
-async_poll_timeout: "{{ 60 * 20 }}"
+# Max minutes to poll for update/install results on remote host (seconds)
+install_timeout: "{{ 60 * 20 }}"

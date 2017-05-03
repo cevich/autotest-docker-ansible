@@ -1,0 +1,82 @@
+---
+
+- assert:
+    that:
+        - 'empty is defined'
+        - "inventory_hostname != 'kommandir'"
+        - "adept_context == 'setup'"
+        - "cloud_provisioning_command is defined"
+        - "cloud_asserts is defined"
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  with_items: ["adept_context","cloud_provisioning_command","group_names"]
+  when: adept_debug
+
+# Allows customized checking of jinja templates / variables in cloud_provisioning_command
+- name: Optional, peon's list of cloud_asserts are all true
+  assert:
+    that: '{{ cloud_asserts }}'
+  when: cloud_asserts not in empty
+
+- name: Peon's cloud_provisioning_command is executed on kommandir
+  shell: "{{ cloud_provisioning_command.command | mandatory }}"
+  environment: "{{ cloud_environment }}"
+  args:
+    chdir: "{{ cloud_provisioning_command.chdir | default(hostvars.kommandir.workspace) }}"
+    executable: "{{ cloud_provisioning_command.executable | default(omit) }}"
+    creates: "{{ cloud_provisioning_command.creates | default(omit) }}"
+    removes: "{{ cloud_provisioning_command.removes | default(omit) }}"
+  when: cloud_provisioning_command not in empty
+  delegate_to: kommandir
+  register: result
+  # Allow output to be logged
+  ignore_errors: True
+
+- name: Command's result is recorded in peon's results dir
+  copy:
+    dest: '{{ hostvars.kommandir.workspace }}/results/{{inventory_hostname}}/creation_result.yml'
+    # Workaround ansible 2.1 bug
+    content: '{{ result | to_json | from_json | to_nice_yaml }}'
+  delegate_to: kommandir
+
+- name: Command's stderr is displayed if it failed
+  debug:
+    msg: '{{ result.stderr }}'
+  when: adept_debug and result | failed
+
+- assert:
+    that: result | success
+
+- name: Command's stdout is parsed into YAML
+  set_fact:
+    # Old ansible takes anything as yaml, going through JSON guarantees parsing.
+    result: '{{ result.stdout | from_yaml | to_json | from_json }}'
+
+- name: result is displayed
+  debug:
+    var: "result"
+  when: adept_debug
+
+- name: peon's host_vars file is marked as ansible managed
+  lineinfile:
+    dest: "{{ hostvarsfile }}"
+    insertbefore: BOF  # Last defined key wins
+    line: "##### ANSIBLE MANAGED FILE ({{ role_path }})"
+    create: True  # Guarantee from this point firward, it always exists
+  delegate_to: kommandir
+
+- name: peon's host_vars file is updated on kommandir with discovered values
+  lineinfile:
+    dest: "{{ hostvarsfile }}"
+    regexp: '^{{ item.key }}:.*'
+    line: '{{ item.key }}: {{ item.value }}'
+    insertafter: EOF
+    create: True
+    state: present
+  delegate_to: kommandir
+  with_dict: "{{ result }}"
+
+- name: peon's host_vars file is reloaded to make new values active
+  include_vars: '{{ hostvarsfile }}'

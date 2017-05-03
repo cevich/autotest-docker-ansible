@@ -1,6 +1,11 @@
 ---
 
-# N/B: Running inside block's "always" task list, everything must pass
+# N/B: This is running inside block's "always" task list, everything must pass
+
+- assert:
+    that:
+        - 'autotest_dest_dir is defined'
+        - 'autotest_docker_path is defined'
 
 - name: results directory exists
   file:
@@ -8,35 +13,31 @@
     state: directory
   ignore_errors: true
 
-- name: Convert Results to text-table
-  shell: tools/scan_results.py > {{ autotest_dest_dir }}/client/results/default/results.txt
-  args:
-    chdir: "{{ autotest_dest_dir }}/client"
-  ignore_errors: true
+- block:
+
+  - name: Convert Results to text-table
+    shell: tools/scan_results.py > {{ autotest_dest_dir }}/client/results/default/results.txt
+    args:
+      chdir: "{{ autotest_dest_dir }}/client"
+    ignore_errors: true
+
+  # Extract a name unique to this run, but common across runs of same job
+  - name: Attempt to run alternate results2junit
+    shell: "{{ autotest_docker_path }}/results2junit --name {{ inventory_hostname }} results/default"
+    args:
+      chdir: "{{ autotest_dest_dir }}/client"
+    register: result
+    ignore_errors: true
+
+  # Sometimes this breaks if a test fails in the "wrong" way.
+  - name: Convert Results to junit
+    shell: tools/results2junit.py results/default > {{ autotest_dest_dir }}/client/results/default/results.junit
+    args:
+      chdir: "{{ autotest_dest_dir }}/client"
+    register: results2junit
+    ignore_errors: true
+    when: result | failed
+
   when: docker_autotest.execute and
         autotest_execution is defined and
         autotest_execution | success
-
-# Extract a name unique to this run, but common across runs of same job
-- name: Attempt to run alternate results2junit
-  shell: "{{ autotest_docker_path }}/results2junit --name {{ peon_metadata.name }}-{{ peon_metadata.version }} results/default"
-  args:
-    chdir: "{{ autotest_dest_dir }}/client"
-  register: results2junit
-  ignore_errors: true
-  when: peon_metadata is defined and
-        docker_autotest.execute and
-        autotest_execution is defined and
-        autotest_execution | success
-
-# Sometimes this breaks if a test fails in the "wrong" way.
-- name: Convert Results to junit
-  shell: tools/results2junit.py results/default > {{ autotest_dest_dir }}/client/results/default/results.junit
-  args:
-    chdir: "{{ autotest_dest_dir }}/client"
-  register: results2junit
-  ignore_errors: true
-  when: docker_autotest.execute and
-        autotest_execution is defined and
-        autotest_execution | success and
-        results2junit | failed

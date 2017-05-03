@@ -1,6 +1,0 @@
----
-
-dependencies:
-  - role: common
-  - role: kommandir_workspaces
-  - role: kommandir

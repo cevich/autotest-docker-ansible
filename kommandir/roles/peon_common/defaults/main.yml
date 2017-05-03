@@ -1,0 +1,4 @@
+---
+
+# When True, the rebooted role will set it false then reboot the host
+needs_reboot: False

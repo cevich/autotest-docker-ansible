@@ -1,8 +1,7 @@
 ---
-installed_enablerepo: []
-installed_disablerepo: []
-lvg_ops: []
-lvol_ops: []
 
-# List of commands (strings) to run if any lvg_ops or lvol_ops change
-post_cmnds: []
+# list of parameter dictionaries for lvg module
+lvg_ops:
+
+# list of parameter dictionaries for lvol module
+lvol_ops:

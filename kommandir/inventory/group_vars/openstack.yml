@@ -1,0 +1,47 @@
+---
+
+# uncomment to force all peons to have public IPs
+# allocated (default assumes kommandir is able to reach private IPs)
+# public_peons: True
+
+cloud_environment:
+    USER_CONFIG_DIR: "{{ hostvars.kommandir.workspace }}"
+    SITE_CONFIG_DIR: "{{ hostvars.kommandir.workspace }}"
+    OS_CLIENT_CONFIG_FILE: "{{ hostvars.kommandir.workspace }}/clouds.yml"
+    HOME: "{{ hostvars.kommandir.workspace }}"
+    WORKSPACE: "{{ hostvars.kommandir.workspace }}"
+
+cloud_asserts:
+    - 'empty is defined'
+    - 'peon_image is defined'
+    - 'peon_flavor is defined'
+    - 'hostvars.kommandir.workspace is defined'
+    # These were setup by exekutir
+    - '"{{ hostvars.kommandir.workspace }}/ssh/kommandir_key.pub" | is_file'
+    - '"{{ hostvars.kommandir.workspace }}/ssh/exekutir_key.pub" | is_file'
+    # Exekutir's extra_kommandir_setup should have taken care of this
+    - '"{{ hostvars.kommandir.workspace }}/clouds.yml" | is_file'
+    # Verify python-virtualenv is available
+    - '"/usr/bin/virtualenv" | is_file'
+    # Verify python2.7 is available
+    - '"/usr/bin/python2.7" | is_file'
+    # Verify redhat-rpm-config is available
+    - '"/usr/lib/rpm/macros.d" | is_dir'
+
+cloud_provisioning_command:
+    command: >
+        bin/openstack_exclusive_create.py \
+            {{ "--verbose" if adept_debug == True else "" }} \
+            --image {{ peon_image }} \
+            --flavor {{ peon_flavor }} \
+            {{ "--private" if public_peons is undefined or public_peons != True else "" }} \
+            {{ "--size " ~ peon_size if peon_size is defined else "" }} \
+            {{ "--userdata " ~ peon_userdata if peon_userdata is defined else "" }} \
+            {{ inventory_hostname }}-{{ uuid }} \
+            {{ hostvars.kommandir.workspace }}/ssh/kommandir_key.pub \
+            {{ hostvars.kommandir.workspace }}/ssh/exekutir_key.pub
+    chdir: "{{ hostvars.kommandir.workspace }}"
+
+cloud_destruction_command:
+    command: "bin/openstack_destroy.py {{ inventory_hostname }}-{{ uuid }}"
+    chdir: "{{ hostvars.kommandir.workspace }}"

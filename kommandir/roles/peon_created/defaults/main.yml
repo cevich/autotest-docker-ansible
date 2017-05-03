@@ -1,0 +1,7 @@
+---
+
+# Verify all inputs/state is ready for cloud_discovery_command
+cloud_environment: {}
+
+# Names of groups to which system should belong
+group_names: []

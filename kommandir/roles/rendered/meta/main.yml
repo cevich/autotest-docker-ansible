@@ -1,0 +1,5 @@
+---
+
+dependencies:
+    - role: failed_peon_junit
+      this_role: "rendered"

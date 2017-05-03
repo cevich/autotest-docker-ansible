@@ -1,26 +1,38 @@
 ---
 
-# Depends:
-#   - lvg_ops: list of parameter dictionaries for lvg module
-#   - lvol_ops: list of parameter dictionaries for lvol module
-# Registers:
+- assert:
+    that:
+        - 'empty is defined'
+        - 'is_atomic is defined'
+        - 'lvg_ops | default() not in empty or lvol_ops | default() not in empty'
 
-# Must happen here, role applied before os-type roles
-- include: roles/installed/tasks/main.yml
+- name: Key variables are displayed
+  debug:
+    var: '{{ item }}'
+  when: adept_debug
+  with_items: ['lvg_ops','lvol_ops', 'is_atomic']
+
+- name: Space needed for RPMs, but RPMs needed to create space
+  block:
+
+    - name: Key variables are displayed
+      debug:
+        var: '{{ item }}'
+      when: adept_debug
+      with_items: ['repo_rpms', 'disable_repos', 'enable_repos', 'install_rpms', 'ansible_distribution']
+
+    - include: '{{ playbook_dir }}/roles/installed/tasks/main.yml'
+
   vars:
-    _installed_rpms:
-        - lvm2
-        - lvm2-libs
-  when: not is_atomic and
-        (lvg_ops != [] or lvol_ops != [])
+      install_rpms: ['lvm2', 'lvm2-libs']
+      repo_rpms: "{{ hostvars[inventory_hostname].repo_rpms | default([])}}"
+      disable_repos: "{{ hostvars[inventory_hostname].disable_repos | default([]) }}"
+      enable_repos: "{{ hostvars[inventory_hostname].enable_repos | default([]) }}"
+      ansible_distribution: "{{ hostvars[inventory_hostname].ansible_distribution }}"
+      all_updated: False
 
-- include: roles/lvm/tasks/main_debug.yml
+  when: not is_atomic|bool
 
-- name: post_cmnd_flag starts out false
-  set_fact:
-    post_cmnd_flag: False
-
-# Condition should apply to task, not each iteration
 - block:
 
     - name: lvg module commands are executed
@@ -34,14 +46,13 @@
       register: result
       with_items: '{{ lvg_ops }}'
 
-    - name: post_cmnd_flag set True when result changed
-      set_fact:
-        post_cmnd_flag: True
-      when: result | changed
+    - name: Result is displayed
+      debug:
+        var: result
+      when: adept_debug
 
-  when: lvg_ops != []
+  when: lvg_ops | default() not in empty
 
-# Condition should apply to task, not each iteration
 - block:
 
     - name: lvol module commands are executed
@@ -56,20 +67,9 @@
       register: result
       with_items: '{{ lvol_ops }}'
 
-    - name: post_cmnd_flag set True when result changed
-      set_fact:
-        post_cmnd_flag: True
-      when: result | changed
+    - name: Result is displayed
+      debug:
+        var: result
+      when: adept_debug
 
-  when: lvol_ops != []
-
-- include: roles/lvm/tasks/main_debug.yml
-
-
-- block:
-
-    - name: post-lvm operation commands are executed
-      command: '{{ item }}'
-      with_items: '{{ post_cmnds }}'
-
-  when: post_cmnd_flag and post_cmnds != []
+  when: lvol_ops | default() not in empty

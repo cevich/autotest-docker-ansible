@@ -1,43 +1,39 @@
 ---
 
-# Depends:
-#   - needs_reboot
-#   - shutdown_timeout
-#   - bootup_timeout
-# Registers:
-#   - needs_reboot
+- assert:
+    that:
+        - 'empty is defined'
+        - 'needs_reboot | default() not in empty'
+        - 'shutdown_timeout | default() not in empty'
+        - 'bootup_timeout | default() not in empty'
+        - 'reboot_context | default() not in empty'
 
-- debug: var=needs_reboot
+- debug:
+    var: "needs_reboot"
+  when: adept_debug
 
 - block:
 
     - name: Reboot System
-      shell: sleep 2 && shutdown -r now
-      async: 1
+      shell: sleep 5 && shutdown -r now
+      async: 120
       poll: 0
       ignore_errors: true
       changed_when: True
 
     - name: System started shutting down
       wait_for:
-        host: '{{ ansible_ssh_host | default(inventory_hostname) }}'
+        host: '{{ ansible_host | default(inventory_hostname) }}'
         state: stopped
         timeout: '{{ shutdown_timeout }}'
         connect_timeout: 1
-      delegate_to: localhost
-
-    - name: System has booted back up
-      wait_for:
-        host: '{{ ansible_host | default(inventory_hostname) }}'
-        port: '{{ ansible_port | default("22") }}'
-        timeout: '{{ bootup_timeout }}'
-        connect_timeout: 1
-      become: False
-      delegate_to: localhost
-      changed_when: True
+      delegate_to: kommandir
 
   when: needs_reboot == True
 
 - name: needs_reboot flag is set false
   set_fact:
     needs_reboot: False
+
+- name: Peon is accessable after reboot
+  include: "{{ playbook_dir }}/roles/peon_up/tasks/main.yml"

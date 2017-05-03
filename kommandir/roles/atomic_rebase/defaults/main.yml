@@ -1,8 +1,8 @@
 ---
 
+# Parameters needed to rebase onto another repo
 ostree_remote:
     name:
     spec:
     url:
     extra:
-rpms_updated: False

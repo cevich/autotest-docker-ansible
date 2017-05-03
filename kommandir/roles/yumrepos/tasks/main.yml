@@ -1,20 +1,36 @@
 ---
 
+- assert:
+    that:
+        - 'empty is defined'
+        - 'ansible_distribution in ["RedHat","Fedora","CentOS"]'
+        - >
+            disable_all_rh_repos in [True,False] or
+            enable_rh_repos | default() not in empty or
+            yum_repos | default() not in empty
+
 # There are situations where default repositories are broken
 - name: All RH repositories are disabled in subscription manager
   command: /usr/sbin/subscription-manager repos --disable=*
-  when: disable_all_rh_repos
+  register: result
+  # The goal is disabling all, ignore failure when no repos enabled.
+  failed_when: >
+    result | failed and
+    not (result.stdout | search("^Error: '\\*' does not match"))
+  when: ansible_distribution == "RedHat" and
+        "subscribed" in group_names and
+        disable_all_rh_repos | default(False)
 
 - name: Select RH repos are enabled
   command: /usr/sbin/subscription-manager repos --enable={{ item }}
-  when: enable_rh_repos != []
+  when: ansible_distribution == "RedHat"
   with_items: '{{ enable_rh_repos | default([]) }}'
 
-- name: yum repository is setup
+- name: yum repositories are setup and enabled
   yum_repository:
-    name: "{{ item.name | mandatory }}"
+    name: "{{ item.name }}"
     baseurl: "{{ item.baseurl }}"
-    description: "Ansible added {{ item.name | mandatory }} repo"
+    description: "Ansible added {{ item.name }} repo"
     gpgcheck: "{{ item.gpgcheck | default(True) }}"
     exclude: "{{ item.excludepkgs | default(omit) }}"
     includepkgs: "{{ item.includepkgs | default(omit) }}"
@@ -23,6 +39,5 @@
     # Subscription manager can't disable non-redhat repos.
     enabled: True
     state: present
-  register: result
+  when: item.name is defined
   with_items: '{{ yum_repos | default([]) }}'
-  when: yum_repos is defined and yum_repos != []

@@ -6,24 +6,66 @@
 
 - assert:
     that:
-        - 'inventory_hostname == "kommandir"'
-        - 'not job_xn_done'
-        - '"nocloud" not in group_names'
+        - 'install_rpms is defined'
+        - 'repo_rpms is defined'
+        - 'enable_repos is defined'
+        - 'disable_repos is defined'
+        - 'install_timeout is defined'
+        - 'use_dnf is defined'
+        - 'all_updated is defined'
+        - 'state in ["present","installed","latest","absent","removed"]'
 
-# Workaround magic behavior changes before/after ansible 1.9.2 WRT urls
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["install_rpms","repo_rpms","enable_repos","disable_repos","install_timeout","use_dnf","all_updated","state"]
+
+# Workaround magic behavior changes before/after ansible 1.9.2 WRT urls in yum's names
 - name: Repository rpms are installed with yum command
   command: "yum install -y {{ item }}"
+  when: not use_dnf and repo_rpms | default() not in empty
   with_items: "{{ repo_rpms | default([]) }}"
   # Avoid running into task timeouts.
   async: 120
   poll: 5
 
-- name: System is updated and RPM packages are installed
+- name: Repository rpms are installed with dnf command
+  command: "dnf install -y {{ item }}"
+  when: use_dnf and repo_rpms | default() not in empty
+  with_items: "{{ repo_rpms | default([]) }}"
+  # Avoid running into task timeouts.
+  async: 120
+  poll: 5
+
+- name: install_rpms is buffered and includes '*' when all_updated is True
+  set_fact:
+    result: '{{ ["*"] | union(install_rpms) }}'
+  when: all_updated
+
+- name: install_rpms is buffered and excludes '*' when all_updated is False
+  set_fact:
+    result: '{{ install_rpms | difference(["*"]) }}'
+  when: not all_updated
+
+- name: Packages are installed/updated from desired repo set using yum
   yum:
-    name: '{{ (["*"] | union(install_rpms)) | join(",") }}'
-    state: latest
+    name: '{{ result | join(",") }}'
+    state: '{{ state }}'
+    disablerepo: '{{ disable_repos | join(",") if disable_repos not in empty else omit }}'
+    enablerepo: '{{ enable_repos | join(",") if enable_repos not in empty else omit }}'
+  when: not use_dnf
+  # This could take longer than ssh timeout
+  async: "{{ 60 * install_timeout }}"
+  poll: 5
+
+- name: Packages are installed/updated from desired repo set using dnf
+  dnf:
+    name: '{{ result | join(",") }}'
+    state: '{{ state }}'
     disablerepo: '{{ disable_repos | join(",") }}'
     enablerepo: '{{ enable_repos | join(",") }}'
-  # This will probably take longer
-  async: "{{ 30 * 60 }}"
-  poll: 30
+  when: use_dnf
+  # This could take longer than ssh timeout
+  async: "{{ 60 * install_timeout }}"
+  poll: 5

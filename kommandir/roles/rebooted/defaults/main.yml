@@ -1,5 +1,7 @@
 ---
-needs_reboot: false
+
+# Flag set True to reboot the host
+needs_reboot: False
 
 # Time to wait for ssh port to close
 shutdown_timeout: 30

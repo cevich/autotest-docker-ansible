@@ -1,12 +1,8 @@
 ---
 
-enabled_services:
-    - docker
-disabled_services:
-    - docker-latest
-started_services:
-    - docker
-stopped_services:
-    - docker-latest
+enabled_services: []
+disabled_services: []
+started_services: []
+stopped_services: []
 restarted_services: []
 reloaded_services: []

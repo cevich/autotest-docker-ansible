@@ -7,11 +7,11 @@ disable_all_rh_repos: False
 
 # This is the opposite of ``disable_all_rh_repos`` (above).  It's
 # a list of subscription-manager supplied repos to explicitly enable.
-enable_rh_repos: []
+enable_rh_repos:
 
 # When neither of the above meet testing requirements, or additional
 # local repositories should be added, this specifies them.  Each item
-# in the list is a dictionary of arguments to the standard 
+# in the list is a dictionary of arguments to the standard
 # ``yum_repository`` Ansible module.  e.g.
 #
 # yum_repos:
@@ -22,4 +22,4 @@ enable_rh_repos: []
 #     - name: "Other special repo"
 #       baseurl: "https://you.get.the.idea"
 #
-yum_repos: []
+yum_repos:

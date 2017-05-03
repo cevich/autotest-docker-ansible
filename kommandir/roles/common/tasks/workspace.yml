@@ -1,9 +1,0 @@
----
-
-# Depends:
-# Registers:
-#   - workspace: Either $WORKSPACE from environment or /var/lib/workspace (default)
-
-- name: The WORKSPACE env. var is loaded into workspace variable
-  set_fact:
-    workspace: '{{ lookup("env", "WORKSPACE") | default("/var/lib/workspace") }}'

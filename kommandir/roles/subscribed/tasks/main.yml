@@ -1,20 +1,31 @@
 ---
 
+- assert:
+    that:
+        - 'empty is defined'
+        - 'rhsm | default() not in empty'
+        - 'rhsm.username | default() not in empty'
+        - 'rhsm.password | default() not in empty'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items:
+    - ["rhsm.username", "rhsm.org", "rhsm.insecure", "rhsm.baseurl"]
+    - ["rhsm.hostname", "rhsm.force", "rhsm_retries", "rhsm_delay"]
+
 # rhsm_baseurl/server_hostname only modify configuration in
 # redhat_subscription module.  More reliable to just pass on
 # the command-line directly
 - name: System is registered and subscribed
-  shell: "{{ lookup('template', '../templates/sub-man-cmd.j2') | trim }}" 
+  shell: "{{ lookup('template', '../templates/sub-man-cmd.j2') | trim }}"
   # Don't put credentials on the command-line for safety's sake
   environment:
     RHSM_USERNAME: "{{ rhsm.username }}"
     RHSM_PASSWORD: "{{ rhsm.password }}"
     RHSM_ORG: "{{ rhsm.org | default('') }}"
   register: result
-  when: rhsm.username is defined and
-        rhsm.username != [] and
-        rhsm.password is defined and
-        rhsm.password != []
   failed_when: result.rc != 0 and
                not result.stderr | search("already registered")
   until: result | success
@@ -22,7 +33,8 @@
   delay: "{{ rhsm_delay | default(omit) }}"
 
 - debug: var=result
+  when: adept_debug
 
 - name: System is pinned to a specific release (no updates/installs past this version)
   command: "subscription-manager release --set={{ rhsm.release }}"
-  when: rhsm.release is defined and rhsm.release not in [None,'', [], {}]
+  when: rhsm.release | default() not in empty

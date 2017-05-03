@@ -6,8 +6,8 @@
 
 - assert:
     that:
-        - "workspace is defined"
-        - "adept_debug is defined"
+        - "workspace | default() not in empty"
+        - "adept_debug | default() not in empty"
 
 # ansible_version is not uniform across all versions
 - name: ansible --version output is captured
@@ -33,3 +33,4 @@
 - name: ansible version is displayed
   debug:
     var: "ansible_version"
+  when: adept_debug

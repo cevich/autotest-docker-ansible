@@ -17,7 +17,7 @@
     validate: "{{ item.validate | default(omit) }}"
   with_items: '{{ docker_autotest_templates }}'
   when: docker_autotest_templates is defined and
-        docker_autotest_templates not in [[], '', None]
+        docker_autotest_templates not in empty
 
 - name: copy listed static/content files
   copy:
@@ -38,4 +38,4 @@
     src: "{{ item.src | default(omit) }}"
   with_items: '{{ docker_autotest_copies }}'
   when: docker_autotest_copies is defined and
-        docker_autotest_copies not in [[], '', None]
+        docker_autotest_copies not in empty

@@ -1,0 +1,12 @@
+{{ "ssh" ~
+   " -o UserKnownHostsFile=/dev/null" ~
+   " -o StrictHostKeyChecking=no" ~
+   " -o IdentityFile=" ~ (hostvars.kommandir.workspace ~ "/ssh/kommandir_key" | quote) ~
+   " -o KbdInteractiveAuthentication=no" ~
+   " -o PreferredAuthentications=publickey" ~
+   " -o PasswordAuthentication=no" ~
+   " -o ConnectTimeout=" ~ wait_for_timeout ~
+   " -p " ~ ansible_port | default(22) ~
+   " -o User=" ~ ansible_user ~
+   " " ~ ansible_host ~
+   " '/bin/sleep 0.1'" }}

@@ -6,7 +6,5 @@
 
 - assert:
     that:
-        - "compatible_ansible_maximum is defined"
-        - "compatible_ansible_minimum is defined"
-        - "compatible_ansible_minimum in [None,'',[],{}] or ansible_version.string | version_compare(compatible_ansible_minimum, '>=')"
-        - "compatible_ansible_maximum in [None,'',[],{}] or ansible_version.string | version_compare(compatible_ansible_maximum, '<')"
+        - "compatible_ansible_minimum | default() in empty or ansible_version.string | version_compare(compatible_ansible_minimum, '>=')"
+        - "compatible_ansible_maximum | default() in empty or ansible_version.string | version_compare(compatible_ansible_maximum, '<')"

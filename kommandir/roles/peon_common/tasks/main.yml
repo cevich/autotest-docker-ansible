@@ -1,0 +1,76 @@
+---
+
+- assert:
+    that:
+        - 'empty is defined'
+        - 'inventory_hostname != "kommandir"'
+        - 'no_log_synchronize | default() not in empty'
+        - 'groups.peons is defined'
+
+- name: Important variables are initialized
+  set_fact:
+    is_atomic: False
+    is_enterprise: False
+  when: empty is undefined
+
+- name: Peons group themselves from their own peon_groups list
+  add_host:
+    name: '{{ inventory_hostname }}'
+    groups: '{{ peon_groups }}'
+  when: peon_groups | default() not in empty
+  # This is really noisy
+  no_log: '{{ no_log_synchronize }}'
+
+# Peon may not be accessable during cleanup
+- block:
+
+    - name: The is_atomic flag is initialized false
+      set_fact:
+        is_atomic: False
+
+    - name: The file /run/ostree-booted file exists on atomic hosts
+      stat:
+        path: "/run/ostree-booted"
+      register: result
+
+    - name: The is_atomic flag is set True if /run/ostree-booted exists
+      set_fact:
+        is_atomic: True
+      when: result.stat.exists
+
+    - name: The is_enterprise flag is initialized False
+      set_fact:
+        is_enterprise: False
+
+    - name: The contents of /etc/redhat-release is buffered
+      command: cat /etc/redhat-release
+      register: result
+
+    - name: The is_enterprise flag is set True when 'Enterprise' found in /etc/redhat-release
+      set_fact:
+        is_enterprise: True
+      when: result.stdout | search('Enterprise')
+
+  when: 'adept_context != "cleanup"'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["peon_groups","is_atomic","is_enterprise"]
+
+- name: peon's results directory exists
+  file:
+    path: "{{ hostvars.kommandir.workspace }}/results/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: "kommandir"
+
+- name: peon's hostvars are logged into it's results dir
+  blockinfile:
+    block: |
+      ---
+      {{ hostvars[inventory_hostname] | to_nice_yaml }}
+    create: True
+    marker: "##### ANSIBLE MANAGED FILE ({{ role_path }})"
+    path: "{{ hostvars.kommandir.workspace }}/results/{{ inventory_hostname }}/ansible_facts.yml"
+  delegate_to: "kommandir"

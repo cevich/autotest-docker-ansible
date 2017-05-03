@@ -1,8 +1,12 @@
 ---
 
-# Depends:
-#   - no_log_synchronize
-#   - ...others....
+- assert:
+    that:
+        - 'no_log_synchronize | default() not in empty'
+        - 'autotest_dest_dir is defined'
+        - 'docker_autotest_cache_dir is defined'
+        - 'autotest_docker_path is defined'
+        - 'docker_autotest is defined'
 
 - name: Make sure docker client is working
   command: docker version
@@ -18,7 +22,7 @@
     src: "{{ docker_autotest_cache_dir }}/autotest/"
     rsync_opts:
         - "--exclude=.git"
-  no_log: '{{ no_log_synchronize | default(true) }}'
+  no_log: '{{ no_log_synchronize }}'
 
 - name: Untracked RELEASE-VERSION is removed
   file:
@@ -36,7 +40,7 @@
     src: "{{ docker_autotest_cache_dir }}/autotest-docker/"
     rsync_opts:
         - "--exclude=.git"
-  no_log: '{{ no_log_synchronize | default(true) }}'
+  no_log: '{{ no_log_synchronize }}'
 
 - name: Cached bugzilla module is copied
   synchronize:
@@ -44,7 +48,7 @@
     src: "{{ docker_autotest_cache_dir }}/python-bugzilla/bugzilla"
     rsync_opts:
         - "--exclude=.git"
-  no_log: '{{ no_log_synchronize | default(true) }}'
+  no_log: '{{ no_log_synchronize }}'
   when: docker_autotest.enable_bugzilla is undefined or
         docker_autotest.enable_bugzilla
 
@@ -73,11 +77,4 @@
   args:
     path: "{{ autotest_dest_dir }}/client/results"
     state: absent
-  when: docker_autotest.execute
-
-# There must always be a results.junit file if autotest was suppose to run
-- include: roles/autotested/tasks/all_fail.yml
-  vars:
-    failure_component: autotest
-    failure_message: "Either autotest itself or a results conversion script failed"
   when: docker_autotest.execute

@@ -1,11 +1,14 @@
 ---
-# Depends:
-#   enabled_services: []
-#   disabled_services: []
-#   started_services: []
-#   stopped_services: []
-#   restarted_services: []
-#   reloaded_services: []
+
+- assert:
+    that:
+        - 'empty is defined'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["enabled_services","disabled_services","started_services","stopped_services","restarted_services","reloaded_services"]
 
 - name: systemd is reloaded
   command: "systemctl daemon-reload"
@@ -20,42 +23,43 @@
   set_fact:
     result: '{{ result.stdout_lines | default([]) }}'
 
-- name: Service lists buffered by state
+- name: Service lists buffered by state and action
   set_fact:
-    # Order is important, use lists of dicts
-    _state:
-        - enabled: True
-          services: '{{ enabled_services | default([]) | intersect(result) }}'
-        - enabled: False
-          services: '{{ disabled_services | default([]) | intersect(result) }}'
-    _action:
-        - state: stopped
-          services: '{{ stopped_services | default([]) | intersect(result) }}'
-        - state: started
-          services: '{{ started_services | default([]) | intersect(result) }}'
-        - state: reloaded
-          services: '{{ reloaded_services | default([]) | intersect(result) }}'
-        - state: restarted
-          services: '{{ restarted_services | default([]) | intersect(result) }}'
+    result:
+        # Order is important, use lists of dicts
+        state:
+           - enabled: True
+             services: '{{ enabled_services | default([]) | intersect(result) }}'
+           - enabled: False
+             services: '{{ disabled_services | default([]) | intersect(result) }}'
+        action:
+           - state: stopped
+             services: '{{ stopped_services | default([]) | intersect(result) }}'
+           - state: started
+             services: '{{ started_services | default([]) | intersect(result) }}'
+           - state: reloaded
+             services: '{{ reloaded_services | default([]) | intersect(result) }}'
+           - state: restarted
+             services: '{{ restarted_services | default([]) | intersect(result) }}'
 
-- debug: var=_state
+- debug:
+    var: "result"
+  when: adept_debug
 
-- name: Services are enabled/disabled
+- name: Enabled/disabled services are made such
   service:
     name: '{{ item.1 }}'
     enabled: '{{ item.0.enabled }}'
   with_subelements:
-    - "{{ _state }}"
-    - services
+    - "{{ result.state }}"
+    - "services"
     - skip_missing: True
 
-- debug: var=_action
-
-- name: Services are stopped/started/reloaded/restarted
+- name: Stopped/started/reloaded/restarted are made such
   service:
     name: '{{ item.1 }}'
     state: '{{ item.0.state }}'
   with_subelements:
-    - "{{ _action }}"
-    - services
+    - "{{ result.action }}"
+    - "services"
     - skip_missing: True

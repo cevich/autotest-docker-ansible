@@ -1,3 +1,0 @@
----
-
-hostvars_destination: "{{ inventory_hostname }}.yml"

@@ -1,0 +1,7 @@
+<testsuites>
+    <testsuite name="{{ hostvars.kommandir.job_name }}" timestamp="{{ hostvars.kommandir.ansible_date_time.date }}" tests="1" errors="0" failures="1" skipped="0">
+        <testcase classname="{{ inventory_hostname }}" name="{{ this_role }}" time="0">
+            <failure message="ADEPT peon {{ inventory_hostname }} failed in/after applying the {{ this_role }} role"/>
+        </testcase>
+    </testsuite>
+</testsuites>

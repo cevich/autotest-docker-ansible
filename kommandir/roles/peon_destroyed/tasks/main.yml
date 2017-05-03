@@ -1,0 +1,42 @@
+---
+
+- assert:
+    that:
+        - 'empty is defined'
+        - 'adept_context == "cleanup"'
+        - 'cloud_destruction_command is defined'
+        - 'inventory_hostname != "kommandir"'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  with_items: ["adept_context","cloud_destruction_command.command"]
+  when: adept_debug
+
+- name: cloud_destruction_command is executed
+  shell: "{{ cloud_destruction_command.command | mandatory }}"
+  environment: "{{ cloud_environment }}"
+  args:
+    chdir: "{{ cloud_destruction_command.chdir | default(workspace) }}"
+    executable: "{{ cloud_destruction_command.executable | default(omit) }}"
+    creates: "{{ cloud_destruction_command.creates | default(omit) }}"
+    removes: "{{ cloud_destruction_command.removes | default(omit) }}"
+  # There are many reasons why this could fail, host will still be removed
+  ignore_errors: True
+  register: result
+  when: cloud_destruction_command not in empty
+  delegate_to: kommandir
+
+- name: Command's result is recorded in peon's results dir
+  copy:
+    dest: '{{ hostvars.kommandir.workspace }}/results/{{inventory_hostname}}/destruction_result.yml'
+    # Workaround ansible 2.1 bug
+    content: '{{ result | to_json | from_json | to_nice_yaml }}'
+  ignore_errors: True
+  delegate_to: kommandir
+
+- name: Display result if cloud_destruction_command failed
+  debug:
+    var: "result"
+  when: cloud_destruction_command not in empty and
+        result | failed

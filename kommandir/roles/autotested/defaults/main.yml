@@ -12,18 +12,18 @@ autotest_docker_path: "{{ autotest_dest_dir }}/client/tests/docker"
 # Timeout in minutes to rewrite into control-file multiplied by 60
 docker_autotest_timeout: 120
 
-# The variables below allow flexibility to dynamicly determine
-# what docker repositories, container names and versions to
-# preserve upon.  More than likely they do not need to be modified
-# from default values unless you know what you're doing.
+# Path relative to workspace or roles/autotested/templates,
+# of custom configuration template file.
+subtests_template_path: "subtests.ini.j2"
+control_template_path: "control.ini.j2"
 
 # List of template module arg dictionaries, empty for none
 # e.g. - dest: "config_custom/tests.ini"
 #        src: "tests.ini.j2"
 docker_autotest_templates:
-    - src: "{{ custom_subtests_ini_j2 | default('subtests.ini.j2') }}"
+    - src: "{{ subtests_template_path }}"
       dest: "{{ autotest_docker_path }}/config_custom/subtests.ini"
-    - src: "{{ custom_control_ini_j2 | default('control.ini.j2') }}"
+    - src: "{{ control_template_path }}"
       dest: "{{ autotest_docker_path }}/config_custom/control.ini"
 
 # List of copy module arg dictionaries, empty for none
@@ -37,10 +37,10 @@ docker_autotest:
     # either _all_ components of the fully-qualified-image-name.
     # or no components to use defaults from docker autotest.
     test_image:
-        host:
-        user:
-        name:
-        tag:
+        host: registry.access.redhat.com
+        user: rhel7
+        name: rhel
+        tag: latest
         # Build this image from url, tagged as above name.
         # Leave empty to pull test image instead.
         build_url:

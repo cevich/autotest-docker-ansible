@@ -1,6 +1,0 @@
----
-
-- include: roles/common/tasks/main.yml
-
-- debug:
-    msg: 'Workspace: {{ workspace | default("ERROR!") }}  Yaml: {{ adept_path | default("ERROR!") }}  Context: {{ adept_context | default("ERROR!") }}  Optional: {{ adept_optional | default("") }}'

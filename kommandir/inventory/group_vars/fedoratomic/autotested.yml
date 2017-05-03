@@ -12,7 +12,6 @@ docker_autotest:
         user: ""
         name: "fedora_python"
         tag: "latest"
-        build_url: "https://raw.githubusercontent.com/cevich/autotest-docker-enabled-product-testing/devel/files/fedora_test_image.tar.gz"
     preserve_fqins:
         - "fedora_python:latest"
         - "docker.io/fedora:latest"

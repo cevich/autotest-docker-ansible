@@ -1,14 +1,8 @@
 ---
 
-- name: docker services are stopped
-  service:
-    name: "{{ item }}"
-    state: stopped
-  # There is no docker-latest on fedora
-  when: 'is_enterprise or item != "docker-latest"'
-  with_items:
-    - "docker"
-    - "docker-latest"
+- assert:
+    that:
+      - 'empty is defined'
 
 - name: Add lines to sysconfig/d-s-s
   lineinfile:

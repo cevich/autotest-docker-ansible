@@ -1,5 +1,15 @@
 ---
 
+- assert:
+    that:
+        - 'autotest_docker_path is defined'
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["config_custom_defaults","docker_autotest"]
+
 - name: Config_custom_defaults string is set
   set_fact:
     config_custom_defaults: "{{ autotest_docker_path }}/config_custom/defaults.ini"
@@ -12,20 +22,20 @@
 
 - name: Defaults needed flag is set true
   set_fact:
-    defaults_needed: true
+    result: true
   when: not config_custom_defaults_file.stat.exists or
         test_image_fqin is defined
 
 - name: Defaults needed flag is set false
   set_fact:
-    defaults_needed: false
-  when: defaults_needed is not defined
+    result: false
+  when: result is not defined
 
 - name: Copy defaults
   command: cp config_defaults/defaults.ini config_custom/defaults.ini
   args:
     chdir: "{{ autotest_docker_path }}"
-  when: defaults_needed
+  when: result
 
 - name: Don't check Autotest version
   ini_file:
@@ -34,7 +44,7 @@
     option: autotest_version
     section: DEFAULTS
     value: "@!NOVERSIONCHECK!@"
-  when: defaults_needed
+  when: result
 
 - name: Defaults test image options values are configured
   ini_file:
@@ -43,7 +53,7 @@
     option: "{{ item.key }}"
     section: DEFAULTS
     value: "{{ item.value }}"
-  when: defaults_needed and test_image_fqin is defined
+  when: result and test_image_fqin is defined
   with_dict:
     docker_registry_host: "{{ docker_autotest.test_image.host | default('') }}"
     docker_registry_user: "{{ docker_autotest.test_image.user | default('') }}"
@@ -56,17 +66,17 @@
   # fixup vim syntax-highlighting problem
   #"
   register: result
-  when: defaults_needed
+  when: result
 
 - name: Default image preserve CSV value is formatted
   set_fact:
     _preserve_fqins: '{{ result.stdout_lines }}'
-  when: defaults_needed and result.stdout_lines
+  when: result and result.stdout_lines
 
 - name: image preserve CSV value is ammended by docker_autotest.preserve_fqins
   set_fact:
     _preserve_fqins: '{{ _preserve_fqins | default([]) + docker_autotest.preserve_fqins  }}'
-  when: defaults_needed and docker_autotest.preserve_fqins is defined and
+  when: result and docker_autotest.preserve_fqins is defined and
         docker_autotest.preserve_fqins not in [None,'',[],{}]
 
 - name: Buffer docker ps output
@@ -75,17 +85,17 @@
   # fixup vim syntax-highlighting problem
   #"
   register: result
-  when: defaults_needed
+  when: result
 
 - name: Default container preserve CSV value is formatted
   set_fact:
     _preserve_cnames: '{{ result.stdout_lines }}'
-  when: defaults_needed and result.stdout_lines
+  when: result and result.stdout_lines
 
 - name: container preserve CSV value is ammended by docker_autotest.preserve_cnames
   set_fact:
     _preserve_cnames: '{{ _preserve_cnames | default([]) + docker_autotest.preserve_cnames }}'
-  when: defaults_needed and docker_autotest.preserve_cnames is defined and
+  when: result and docker_autotest.preserve_cnames is defined and
         docker_autotest.preserve_cnames not in [None,'',[],{}]
 
 - name: Defaults image and container preserve options values are configured
@@ -95,7 +105,7 @@
     option: "{{ item.key }}"
     section: DEFAULTS
     value: "{{ item.value }}"
-  when: defaults_needed and item.value not in [None,'',',',[],{}]
+  when: result and item.value not in [None,'',',',[],{}]
   with_dict:
     preserve_fqins: "{{ _preserve_fqins | default([]) | join(',') }}"
     preserve_cnames: "{{ _preserve_cnames | default([]) | join(',') }}"

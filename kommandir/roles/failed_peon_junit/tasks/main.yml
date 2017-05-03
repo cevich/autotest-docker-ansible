@@ -1,0 +1,26 @@
+---
+
+# This role is applied between every setup role, don't make too much noise
+- block:
+
+  - assert:
+      that:
+          - 'empty is defined'
+          - 'inventory_hostname != "kommandir"'
+          # Not literally, rather the role that included failed_peon_junit
+          - 'this_role | default() not in empty'
+          - 'job_name | default() not in empty'
+
+  - name: Key variables are displayed
+    debug:
+      var: "{{ item }}"
+    with_items: ["job_name","this_role","inventory_hostname"]
+
+  when: adept_debug
+
+- name: Peon's results.junit file is cooked with failure of upcoming role
+  template:
+    # peon_up includes this file, need full-path to template
+    src: "{{ playbook_dir }}/roles/failed_peon_junit/templates/failed_peon.junit.j2"
+    dest: "{{ hostvars.kommandir.workspace }}/results/{{ inventory_hostname }}/results.junit"
+  delegate_to: kommandir

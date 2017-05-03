@@ -1,38 +1,60 @@
 ---
 
-# Depends:
-#   - $WORKSPACE environment variable
-#   - $ADEPT_PATH: environment variable
-#   - $ADEPT_OPTIONAL (optional)
-# Registers:
-#   - workspace: $WORKSPACE contents or /var/lib/workspace (default)
-#   - adept_path: Either $ADEPT_PATH from environment or /var/lib/adept (default)
-#   - adept_optional: $ADEPT_OPTIONAL or undefined (it's optional)
-
-- name: The WORKSPACE env. var is loaded into workspace variable
+- name: The empty value is defined
   set_fact:
-    workspace: '{{ lookup("env", "WORKSPACE") | default("/var/lib/workspace", True) }}'
+    empty:
+        - Null
+        - ""
+        - []
+        - {}
 
-- name: The ADEPT_PATH env. var is loaded into adept_path variable
+- assert:
+    # These are set automatically by adept.py
+    that:
+        - "workspace | default() not in empty"
+        - "adept_path | default() not in empty"
+        - "adept_context | default() not in empty"
+        - "uuid | default() not in empty"
+        - "job_name | default() not in empty"
+        - "groups.peons is defined"
+        - 'no_log_synchronize | default() not in empty'
+
+
+- name: Important variables are initialized
   set_fact:
-    adept_path: '{{ lookup("env", "ADEPT_PATH") | default("/var/lib/adept", True) }}'
+    hostvarsfile: "{{ inventory_dir }}/host_vars/{{ inventory_hostname }}.yml"
+    result:
+    ANSIBLE_PRIVATE_KEY_FILE: '{{ hostvars.kommandir.workspace }}/ssh/kommandir_key'
+  when: hostvarsfile is undefined
 
-- name: The ADEPT_OPTIONAL env. var is buffered
-  set_fact:
-    adept_optional: '{{ lookup("env", "ADEPT_OPTIONAL") | trim }}'
+- block:  # when: inventory_hostname == "kommandir"
 
-- name: The needs_reboot flag is set false
-  set_fact:
-    needs_reboot: False
+    - name: The kommandir is always a member of the nocloud group
+      add_host:
+        name: "kommandir"
+        groups: "nocloud"
 
-- include: ../../../roles/common/tasks/is_atomic.yml
-- include: ../../../roles/common/tasks/is_enterprise.yml
+    - name: The kommandir groups all peons from their peon_groups list
+      add_host:
+        name: '{{ item.inventory_hostname }}'
+        groups: '{{ item.peon_groups }}'
+      when: 'item.peon_groups | default() not in empty'
+      with_items: "{{ groups['peons'] | map('extract', hostvars) | list }}"
+      # This one is really noisy
+      no_log: '{{ no_log_synchronize }}'
 
-- debug:
+  when: 'inventory_hostname == "kommandir"'
+
+- name: Results sub-directory for exists for inventory_hostname
+  file:
+  args:
+    path: "{{ hostvars.kommandir.workspace }}/results/{{ inventory_hostname }}"
+    state: directory
+  when: 'adept_context == "setup" and inventory_hostname != "kommandir"'
+  delegate_to: kommandir
+
+- name: Key variables are displayed
+  debug:
     var: "{{ item }}"
-  with_items:
-    - "workspace"
-    - "adept_path"
-    - "adept_optional"
-    - "is_atomic"
-    - "is_enterprise"
+  when: adept_debug
+  with_items: ["uuid","job_name","adept_context","workspace","inventory_hostname","group_names","groups","adept_optional","adept_path","hostvarsfile","cleanup"]

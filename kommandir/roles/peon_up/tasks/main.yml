@@ -1,0 +1,54 @@
+---
+
+- assert:
+    that:
+        - 'empty is defined'
+        - 'test_command_template is defined'
+        - 'wait_for_timeout | default() not in empty'
+        - "inventory_hostname != 'kommandir'"
+        - "hostvars.kommandir.workspace is defined"
+        - "ansible_host is defined"
+
+- name: Key variables are displayed
+  debug:
+    var: "{{ item }}"
+  when: adept_debug
+  with_items: ["ansible_host","ansible_port","ansible_user","wait_for_timeout", 'reboot_context']
+
+- name: Role was included by rebooted role, bypassing dependencies
+  include: "{{ playbook_dir }}/roles/failed_peon_junit/tasks/main.yml"
+  vars:
+    this_role: "rebooted.peon_up.{{ reboot_context }}"
+  when: reboot_context | default() not in empty
+
+- name: peon's ssh port is open from perspective of kommandir
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: "{{ ansible_port | default(22) }}"
+    # Fail quickly == retry sooner
+    connect_timeout: 1
+    # Minumum is two-DNS failures + one second
+    timeout: "{{ wait_for_timeout }}"
+    state: "started"
+  delegate_to: kommandir
+  register: result
+  until: result | success
+  retries: '{{ wait_for_timeout }}'
+  delay: 1
+
+# Any remote module that fails will immediatly cause host to be marked uncreachable
+# after zero retries.  Run a local shell command to do the detection, with retries,
+# until it's successful.
+- name: The command from template referenced by test_command_template is eventually successful
+  command: '{{ lookup("template", test_command_template) }}'
+  register: result
+  delegate_to: kommandir
+  until: result | success
+  retries: '{{ wait_for_timeout }}'
+  delay: 1
+  when: test_command_template not in empty
+
+- name: The result of the command is displayed
+  debug:
+    var: "result"
+  when: adept_debug

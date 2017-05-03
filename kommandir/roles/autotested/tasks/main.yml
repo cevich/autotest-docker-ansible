@@ -1,7 +1,7 @@
 ---
 
-- include: roles/autotested/tasks/setup.yml
+- include: '{{ playbook_dir }}/roles/autotested/tasks/setup.yml'
   when: adept_context == 'setup'
 
-- include: roles/autotested/tasks/run.yml
+- include: '{{ playbook_dir }}/roles/autotested/tasks/run.yml'
   when: adept_context == 'run'
