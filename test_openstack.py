@@ -48,6 +48,9 @@ test_adept.TestPylint.DISABLE += ",W0703"
 # pylint doesn't count __init__ as a public method for ABCs
 test_adept.TestPylint.DISABLE += ",R0903"
 
+# main shouldn't be subject to only upper-case variable names
+test_adept.TestPylint.DISABLE += ",C0103"
+
 class TestCaseBase(test_adept.TestCaseBase):
     """Reuses essental/basic unittest plumbing from adepts unittests"""
 
@@ -56,6 +59,9 @@ class TestCaseBase(test_adept.TestCaseBase):
     def setUp(self):
         super(TestCaseBase, self).setUp()
         self.uut = __import__(self.UUT)
+        # Locking is tested elsewhere
+        suf = Mock(spec=self.uut.Flock)
+        self.create_patch('%s.Flock' % self.UUT, suf)
 
 
 class TestPylint(test_adept.TestPylint):
@@ -215,6 +221,7 @@ class TestMain(TestCaseBase):
     def test_discover(self):
         """Test main calls discover function"""
         self.uut.main([self.uut.DISCOVER_CREATE_NAME, 'foobar', 'snafu'],
+                      dict(operation='discover', name='foobar'),
                       self.service_sessions)
         self.assertFalse(self.destroy.called)
         self.assertFalse(self.create.called)
@@ -227,6 +234,7 @@ class TestMain(TestCaseBase):
         with self.assertLogs(level='WARNING') as context:
             self.uut.main([self.uut.DISCOVER_CREATE_NAME,
                            'foobar', 'snafu'],
+                          dict(operation='create', name='foobar'),
                           self.service_sessions)
         self.assertRegex(' '.join(context.output),
                          r'.*existing.*%s' % 'foobar')
@@ -237,6 +245,7 @@ class TestMain(TestCaseBase):
         """Test main calls discover and raises important exceptions"""
         args = ([self.uut.DISCOVER_CREATE_NAME,
                  'foobar', 'snafu'],
+                dict(operation='discover', name='foobar'),
                 self.service_sessions)
         msg = "Unittest error message"
         for xcept in (RuntimeError(msg), ValueError(msg), KeyError(msg)):
@@ -250,9 +259,10 @@ class TestMain(TestCaseBase):
             # discover will NOT raise, main should exit
             self.uut.main([self.uut.ONLY_CREATE_NAME,
                            'snafu', 'foobar'],
+                          dict(operation='exclusive', name='foobar'),
                           self.service_sessions)
         self.assertRegex(' '.join(context.output),
-                         r'.*existing.*%s' % 'snafu')
+                         r'.*existing.*%s' % 'foobar')
         self.assertFalse(self.destroy.called)
         self.assertTrue(self.discover.called)
         self.assertFalse(self.create.called)
@@ -261,6 +271,7 @@ class TestMain(TestCaseBase):
     def test_destroy(self):
         """Test main calls destroy function"""
         self.uut.main([self.uut.DESTROY_NAME, 'snafu'],
+                      dict(operation='destroy', name='foobar'),
                       self.service_sessions)
         self.assertFalse(self.create.called)
         self.assertFalse(self.discover.called)

@@ -10,6 +10,8 @@ Requires:
 *  RHEL/CentOS host w/ RPMs:
     * Python 2.7+
     * redhat-rpm-config (base repo)
+    * gcc
+    * glibc-devel
     * python-virtualenv or python2-virtualenv (EPEL repo)
 * Openstack credentials as per:
     https://docs.openstack.org/developer/os-client-config/
@@ -22,11 +24,10 @@ import logging
 import time
 import argparse
 import subprocess
-from tempfile import mkdtemp
 from base64 import b64encode
 import shutil
-import fcntl
 import virtualenv
+from flock import Flock
 
 # Operation is discovered by symlink name used to execute script
 ONLY_CREATE_NAME = 'openstack_exclusive_create.py'
@@ -121,16 +122,65 @@ ansible_become: False
 ansible_connection: ssh
 """
 
+WORKSPACE_LOCKFILE_PREFIX = '.adept_workspace'
+GLOBAL_LOCKFILE_PREFIX = '.adept_global'
 
-class OpenstackREST(object):
+class Singleton(object):
     """
-    State full cache of Openstack REST API interactions.
+    Base class for singletons, every instantiated class is the same object
+
+    :param args: Positional arguments to pass to subclass ``__new__`` and ``__init__``
+    :param drgs: Keyword arguments to pass to subclass ``__new__`` and ``__init__``
+    """
+
+    # Singleton instance is stored here
+    _singleton = None
+
+    def __new__(cls, *args, **dargs):
+        if cls._singleton is None:
+            cls._singleton = super(Singleton, cls).__new__(cls, *args, **dargs)
+            cls._singleton.__new__init__(*args, **dargs)
+        return cls._singleton  # instance's ``__ini__()`` runs next
+
+    def __new__init__(self, *args, **dargs):
+        """
+        Creation-time abstraction for singleton, only happens once, ever.
+
+        :param args: Positional arguments to pass to subclass ``__new__`` and ``__init__``
+        :param drgs: Keyword arguments to pass to subclass ``__new__`` and ``__init__``
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def __clobber__(cls):
+        """
+        Provides a way to un-singleton the class, mostly just useful for unittesting.
+        """
+        cls._singleton = None
+
+
+class OpenstackLock(Singleton, Flock):
+    """
+    Singleton security around critical (otherwise) non-atomic Openstack operations
+    """
+
+    # Only initialize singleton once
+    # pylint: disable=W0231
+    def __init__(self, lockfilepath=None):
+        del lockfilepath
+
+    def __new__init__(self, lockfilepath=None):
+        super(OpenstackLock, self).__init__(lockfilepath)
+
+
+class OpenstackREST(Singleton):
+    """
+    State-full centralized cache of Openstack REST API interactions.
 
     :docs: https://developer.openstack.org/#api
+    :param service_sessions: Map of service names to service instances
+                             (from os-client-config cloud instance)
     """
-
-    # The singleton
-    _self = None
 
     # Cache of current and previous response instances and json() return.
     response_json = None
@@ -139,18 +189,19 @@ class OpenstackREST(object):
     # Useful for debugging purposes
     previous_responses = None
 
-
     # Current session object
     service_sessions = None
 
-    def __new__(cls, service_sessions=None):
-        if cls._self is None:  # Initialize singleton
-            if service_sessions is None:
-                raise ValueError("service_sessions must be passed the first time")
-            cls._self = super(OpenstackREST, cls).__new__(cls)
-            cls.service_sessions = service_sessions
-            cls.previous_responses = []
-        return cls._self  # return singleton
+    def __new__init__(self, service_sessions=None):
+        if service_sessions is None and self.service_sessions is None:
+            raise ValueError("service_sessions must be passed on first instantiation")
+        self.service_sessions = service_sessions
+
+    def __init__(self, service_sessions=None):
+        del service_sessions  # consumed by __new__
+        logging.debug('New %s created, wiping any previous REST API history.',
+                      self.__class__.__name__)
+        self.previous_responses = []
 
     def raise_if(self, true_condition, xception, msg):
         """
@@ -390,6 +441,7 @@ class TimeoutAction(object):
     """
 
     sleep = 1  # Sleep time per iteration, avoids busy-waiting.
+    # N/B: timeout value referenced outside of class (I know I'm lazy)
     timeout = DEFAULT_TIMEOUT  # (seconds)
     time_out_at = None  # absolute
     timeout_exception = RuntimeError
@@ -522,7 +574,7 @@ class TimeoutCreate(TimeoutAction):
                         "     primary-group: root\n"
                         "     homedir: /root\n"
                         "     system: true\n" % str(auth_key_lines))
-        logging.debug("Userdata: %s", userdata)
+        logging.debug("\nUserdata: %s", userdata)
 
         server_json = dict(
             name=name,
@@ -695,7 +747,7 @@ class TimeoutDeleteVolume(TimeoutAction):
             volume_ids = self.os_rest.volume_list()
             if volume_id not in volume_ids:
                 # Gone now, whew! this is okay
-                logging.warning(self.vanish_fmt, volume_id, xcept)
+                logging.debug(self.vanish_fmt, volume_id, xcept)
                 # Stub volume_details to satisfy original caller and identify race
                 return dict(id=volume_id, attachments=[], sentinel=self._sentinel)
             else:
@@ -721,7 +773,7 @@ class TimeoutDeleteVolume(TimeoutAction):
                 self.os_rest.volume_request('/volumes/%s' % volume_id,
                                             unwrap=None, method='delete')
             except Exception, xcept:
-                logging.warning(self.vanish_fmt, volume_id, xcept)
+                logging.debug(self.vanish_fmt, volume_id, xcept)
                 return volume_details
             return None  # try again
 
@@ -812,7 +864,8 @@ def destroy(name=None, uuid=None, **dargs):
 
 # Arguments come from argparse, listing them all for clarity of intent
 def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
-           private=False, router_name=None, size=None, userdata_filepath=None):
+           private=False, router_name=None, size=None,
+           userdata_filepath=None, **dargs):
     """
     Create a new VM with name and authorized_keys containing pub_key_files.
 
@@ -822,8 +875,12 @@ def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
     :param flavor: Name of the openstack VM flavor to use
     :param private: When False, assign a floating IP to VM.
     :param router_name: When private==False, router name to use, or None for first-found.
+    :param size: Optional size (gigabytes) volume to attach to VM
+    :param userdata_filepath: Optional full path to YAML file containing userdata and,
+                              optional ``{auth_key_lines}`` token (JSON).
+    :param dargs: Additional parsed arguments, possibly not relevant.
     """
-
+    del dargs  # not used
     pubkeys = []
     for pub_key_file in pub_key_files:
         logging.info("Loading public key file: %s", pub_key_file)
@@ -845,15 +902,24 @@ def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
             TimeoutAttachVolume(name, server_id, int(size))()
 
         if not private:
-            logging.info("Attempting to assign floating ip on network %s", router_name)
-            TimeoutAssignFloatingIP(server_id, router_name)()
+            # This can steal a floating IP out from another server
+            # if addFloatingIp POST happens concurrently.  It is
+            # only partly mitigated by locking between processes of this job.
+            with OpenstackLock().timeout_acquire_write(TimeoutAction.timeout) as oslock:
+                if oslock is None:
+                    raise ValueError("Timeout acquiring lock")
+                logging.info("Attempting to assign floating ip on network %s", router_name)
+                TimeoutAssignFloatingIP(server_id, router_name)()
 
         discover(name=name, uuid=server_id, router_name=router_name, private=private)
 
     # Must not leak servers or volumes, original exception will be re-raised
     except Exception, xcept:
-        logging.error("Create threw %s", xcept)
-        destroy(name, server_id)
+        logging.error("Create threw %s, attempting to destroy VM.", xcept)
+        try:
+            destroy(name, server_id)
+        finally:
+            raise
 
 def parse_args(argv, operation='help'):
     """
@@ -897,6 +963,10 @@ def parse_args(argv, operation='help'):
                             help=('Path to filename containing cloud-config userdata'
                                   ' YAML to use instead of default (Optional).'))
 
+        parser.add_argument('--lockdir', '-l', default='', type=str,
+                            help=('Absolute path to directory where global lock file'
+                                  ' should be created/used.'))
+
     # All operations get these
     parser.add_argument('--verbose', '-v', default=False,
                         action='store_true',
@@ -925,13 +995,6 @@ def parse_args(argv, operation='help'):
     args = parser.parse_args(argv)
     logging.debug("Parsed arguments: %s", args)
 
-    # Verbose was already processed in __main__, only exists here for --help
-    del args.verbose
-
-    # Consume this one right here
-    TimeoutAction.timeout = args.timeout
-    del args.timeout
-
     # Encode as dictionary, makes parameter passing easier to unitest
     dargs = dict([(n, getattr(args, n))
                   for n in args.__dict__.keys()  # no better way to do ths
@@ -942,12 +1005,15 @@ def parse_args(argv, operation='help'):
         dargs['pub_key_files'] = dargs['pubkey']  # Can't use dest (above)
         del dargs['pubkey']
 
+    # Add operation for reference
+    dargs['operation'] = operation
+
     logging.info("Processed arguments: %s", dargs)
 
     return dargs
 
 
-def main(argv, service_sessions):
+def main(argv, dargs, service_sessions):
     """
     Contains all primary calls for script for easier unit-testing
 
@@ -956,24 +1022,23 @@ def main(argv, service_sessions):
                              to request-like session instances
     :returns: Exit code integer
     """
-    basename = os.path.basename(argv[0])
-    if basename in (DISCOVER_CREATE_NAME, ONLY_CREATE_NAME):
-        dargs = parse_args(argv, 'discover')
+    if dargs['operation'] in ('discover', 'create', 'exclusive'):
         logging.info('Attempting to find VM %s.', dargs['name'])
         # The general exception is re-raised on secondary exception
         try:
             OpenstackREST(service_sessions)
             discover(**dargs)
-            if basename == ONLY_CREATE_NAME:  # no exception == found VM
+            if dargs['operation'] == 'exclusive':  # no exception == found VM
                 logging.error("Found existing vm %s, refusing to re-create!"
                               "  Exiting non-zero.", dargs['name'])
                 sys.exit(1)
         except IndexError, xcept:
+            # Different requirements from discover (yes, this is a bad design)
+            dargs = parse_args(argv, 'create')
             # Not an error (yet), will try creating VM next
             logging.warning("Failed to find existing VM: %s.", dargs['name'])
             logging.debug("%s: %s", xcept.__class__.__name__, str(xcept))
             try:
-                dargs = parse_args(argv, 'create')
                 OpenstackREST(service_sessions)
                 logging.info('Attempting to create new VM %s.', dargs['name'])
                 create(**dargs)
@@ -983,15 +1048,10 @@ def main(argv, service_sessions):
                 logging.error(xcept)
                 logging.error("Creation exception:")
                 raise
-    elif basename == DESTROY_NAME:
-        dargs = parse_args(argv, 'destroy')
+    elif dargs['operation'] == 'destroy':
         OpenstackREST(service_sessions)
         logging.info("Destroying VM %s", dargs['name'])
         destroy(**dargs)
-    else:
-        logging.error("Script was not called as %s, %s, or %s", *ALLOWED_NAMES)
-        parse_args(argv, 'help')
-
 
 
 def api_debug_dump():
@@ -1007,11 +1067,11 @@ def api_debug_dump():
             # These are useful for creating unitest data + debugging unittests
             lines[-1]['sequence_number'] = seq_num
             seq_num += 10
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
-    basename = os.path.basename(sys.argv[0])
-    prefix = basename.split('.', 1)[0]
-    filepath = os.path.join(os.environ['WORKSPACE'], '.virtualenv',
+    _basename = os.path.basename(sys.argv[0])
+    prefix = _basename.split('.', 1)[0]
+    filepath = os.path.join(workspace, '.virtualenv',
                             '%s_api_responses.json' % prefix)
     # Don't fail main operations b/c missing module
     import json as simplejson
@@ -1033,14 +1093,23 @@ def _pip_upgrade_install(venvdir, requirements, onlybin, nobin):
                                               env=environment,
                                               stdout=subprocess.PIPE,
                                               stderr=subprocess.STDOUT)
-    logging.info("Upgrading pip.")
-    shell('pip install --upgrade pip')
-    logging.info("Installing packages.")
-    pargs = ['pip', 'install']
-    pargs += ['--only-binary', ','.join(onlybin)]
-    pargs += ['--no-binary', ','.join(nobin)]
-    pargs += requirements
-    shell(' '.join(pargs))
+    # Sometimes there are glitches, retry this a few times
+    for tries in (1, 2, 3):
+        try:
+            logging.info("Upgrading pip (try %d).", tries)
+            shell('pip install --upgrade pip')
+            logging.info("Installing packages.")
+            pargs = ['pip', 'install']
+            pargs += ['--only-binary', ','.join(onlybin)]
+            pargs += ['--no-binary', ','.join(nobin)]
+            pargs += requirements
+            shell(' '.join(pargs))
+        # last exception will be raised after 3 tries
+        except:  # pylint: disable=W0702
+            continue
+        else:
+            return
+    raise
 
 
 def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
@@ -1055,31 +1124,22 @@ def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
     :param nobin: List of pip packages to build and install (overrides onlybin)
     """
 
-    # They do exactly what they say pylint: disable=C0111
-    def lock_file(filename, mode=fcntl.LOCK_EX):
-        lockfile = open(filename, "w")
-        fcntl.lockf(lockfile, mode)
-        return lockfile
-
-    def unlock_file(lockfile):
-        fcntl.lockf(lockfile, fcntl.LOCK_UN)
-        lockfile.close()
-
     logging.info("Setting up python virtual environment under %s", venvdir)
     # Only one concurrent process should do _pip_upgrade_install()
-    lockfile = lock_file("%s_lock" % venvdir)
-    try:
-        if os.path.isdir(venvdir):
-            logging.info("Found existing virtual environment")
-        else:
-            logging.info("Creating new virtual environment")
-            virtualenv.create_environment(venvdir, site_packages=False)
-            _pip_upgrade_install(venvdir, requirements, onlybin, nobin)
-    except:
-        shutil.rmtree(venvdir, ignore_errors=True)
-        raise
-    finally:
-        unlock_file(lockfile)
+    lockfile = Flock()  # No need to use global lock, a local one is fine
+    with lockfile.timeout_acquire_write(TimeoutAction.timeout) as vlock:
+        if vlock is None:
+            raise ValueError("Timeout acquiring lock")
+        try:
+            if os.path.isdir(venvdir):
+                logging.info("Found existing virtual environment")
+            else:
+                logging.info("Creating new virtual environment")
+                virtualenv.create_environment(venvdir, site_packages=False)
+                _pip_upgrade_install(venvdir, requirements, onlybin, nobin)
+        except:
+            shutil.rmtree(venvdir, ignore_errors=True)
+            raise
 
     logging.debug("Activating python virtual environment from %s", venvdir)
     old_file = namespace['__file__']  # activate_this checks __file__
@@ -1091,28 +1151,45 @@ def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
 
 
 if __name__ == '__main__':
-    LOGGER = logging.getLogger()
-    if [arg for arg in sys.argv if arg == '-v' or arg == '--verbose']:
-        # Lower to DEBUG for massively detailed output
-        LOGGER.setLevel(logging.DEBUG)
-        VERBOSE = True
+    # Parse arguments
+    basename = os.path.basename(sys.argv[0])
+    if basename == DISCOVER_CREATE_NAME:
+        _dargs = parse_args(sys.argv, 'discover')
+    elif basename == ONLY_CREATE_NAME:
+        _dargs = parse_args(sys.argv, 'exclusive')
+    elif basename == DESTROY_NAME:
+        _dargs = parse_args(sys.argv, 'destroy')
     else:
-        # Lower to INFO level and higher for general details
-        LOGGER.setLevel(logging.INFO)
-        VERBOSE = False
-    del LOGGER # keep global namespace clean
-
-    # N/B: Any/All names used here are in the global scope
-    # pylint: disable=C0103
+        logging.error("Script was not called as %s, %s, or %s", *ALLOWED_NAMES)
+        parse_args(sys.argv, 'help')  # exits
     workspace = os.environ.get('WORKSPACE')
     if workspace is None:
-        raise RuntimeError("Environment variable WORKSPACE is not set,"
-                           " it must be a temporary, writeable directory.")
-
+        logging.error(EPILOG)
+        sys.exit(2)
+    TimeoutAction.timeout = _dargs['timeout']
+    Flock.def_path = workspace
+    Flock.def_prefix = WORKSPACE_LOCKFILE_PREFIX
+    # initialize singleton
+    if 'lockdir' in _dargs:
+        OpenstackLock(os.path.join(_dargs['lockdir'],
+                                   '%s.lock' % WORKSPACE_LOCKFILE_PREFIX))
+    else:
+        OpenstackLock(os.path.join(workspace,
+                                   '%s.lock' % GLOBAL_LOCKFILE_PREFIX))
     # pip and os-client-config behavior depends on these
     os.environ['HOME'] = workspace
     os.chdir(workspace)
+    # Allow early debugging/verbose mode
+    logger = logging.getLogger()
+    if _dargs['verbose']:
+        logger.setLevel(logging.DEBUG)
+    else:
+        # Lower to INFO level and higher for general details
+        logger.setLevel(logging.INFO)
+    del logger # keep global namespace clean
 
+    # N/B: Any/All names used here are in the global scope
+    # pylint: disable=C0103
     activate_and_setup(globals(),
                        os.path.join(workspace, '.virtualenv'),
                        PIP_REQUIREMENTS,
@@ -1122,6 +1199,13 @@ if __name__ == '__main__':
     logging.info("Loading openstack client config module")
     os_client_config = __import__('os_client_config')
 
+    # Shut down the most noisy loggers
+    for noisy_logger in ('stevedore.extension',
+                         'keystoneauth.session',
+                         'requests.packages.urllib3.connectionpool'):
+        shut_me_up = logging.getLogger(noisy_logger)
+        shut_me_up.setLevel(logging.WARNING)
+
     # OpenStackConfig() obliterates os.environ for security reasons
     original_environ = os.environ.copy()
     osc = os_client_config.OpenStackConfig()
@@ -1130,14 +1214,14 @@ if __name__ == '__main__':
 
     logging.info("Using cloud '%s' from %s", os_cloud_name, osc.config_filename)
     cloud = osc.get_one_cloud(os_cloud_name)
+    del os_cloud_name  # keep global namespace clean
     service_names = cloud.get_services()
     logging.debug("Initializing openstack services: %s", service_names)
     sessions = dict([(svc, cloud.get_session_client(svc))
                      for svc in service_names])
+    del cloud  # keep global namespace clean
     try:
-        main(sys.argv, sessions)
-        if VERBOSE:
-            api_debug_dump()
+        main(sys.argv, _dargs, sessions)
     finally:
-        if VERBOSE:
+        if _dargs['verbose']:
             api_debug_dump()
