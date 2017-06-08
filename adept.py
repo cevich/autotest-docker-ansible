@@ -66,8 +66,8 @@ def highlight_normal(color_code=32):  # Green
     """
     If TERM env. var is not dumb or serial, return two color codes
     """
-    term = os.environ.get('TERM', 'some_default')
-    if 'dumb' not in term and 'serial' not in term:
+    term = os.environ.get('TERM', 'dumb')
+    if term not in ['dumb', 'serial']:
         highlight = '%c[1;%dm' % (27, color_code)  # dec 27 is escape character
         normal = '%c[0;39m' % 27
     else:
@@ -372,7 +372,8 @@ class ActionBase(object):
             # Don't bother if it's empty either
             if safe in os.environ and os.environ[safe]:
                 env[safe] = os.environ[safe]
-        env.update({'WORKSPACE': self.parameters.workspace,
+        env.update({'TERM': os.environ.get('TERM', 'dumb'),
+                    'WORKSPACE': self.parameters.workspace,
                     'ADEPT_PATH': os.path.dirname(MYPATH),
                     'HOSTNAME': MYHOSTNAME,
                     'ADEPT_CONTEXT': self.parameters.context.strip(),
