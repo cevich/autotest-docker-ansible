@@ -16,11 +16,10 @@ import sys
 import subprocess
 import re
 import shlex
-import json
 from socket import gethostname
 from select import (poll, POLLPRI, POLLIN)
 from collections import namedtuple, Sequence
-from yaml import load_all, load
+from yaml import load_all
 
 # Prefer LibYAML instead of (slower) python version
 try:
@@ -720,16 +719,6 @@ class Playbook(Command):
         # Relative paths in playbook assume this directory
         self.popen_dargs['cwd'] = os.path.dirname(self.filepath)
 
-    def process_global_vars(self):
-        if self.global_vars:
-            args = self.popen_dargs['args']
-            env = self.popen_dargs['env']
-            for key, val in self.global_vars.items():
-                val = self.sub_env(env, val)
-                if val.strip():
-                    # Format entire string as JSON, strip quotes
-                    val = json.dumps(load('%s: %s' % (key, val)))
-                    args.extend(['--extra-vars', val])
 
 class Variable(ActionBase):
     """Manipulates global variables accessable to all action instances"""
