@@ -15,8 +15,6 @@ matrix:
 
 git:
     submodules: false
-    # At least two are needed for the typo-check (below)
-    depth: 3
 
 env:
     global:
