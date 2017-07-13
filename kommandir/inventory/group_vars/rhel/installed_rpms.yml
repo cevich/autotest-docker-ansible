@@ -1,13 +1,10 @@
 ---
 
-enable_repos:
-    - rhel-7-server-rpms
-    - rhel-7-server-extras-rpms
-    - rhel-7-server-optional-rpms
-    - rhel-7-server-supplementary-rpms
 install_rpms:
     - docker
     - docker-latest
+    - runc
+    - oci-umount
     - atomic
     - docker-selinux
     - procps

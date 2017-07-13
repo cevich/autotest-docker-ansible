@@ -6,4 +6,6 @@ enable_rh_repos:
     - rhel-7-server-extras-rpms
     - rhel-7-server-optional-rpms
     - rhel-7-server-supplementary-rpms
+
+# No repos are enabled on atomic because nothing can be installed
 installed_enablerepo: []
