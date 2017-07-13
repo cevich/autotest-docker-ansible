@@ -118,11 +118,6 @@
     mode: "0444"
     state: "file"
 
-# N/B: Functioning of this section is critical
-#      e.g. if install_rpms is overriden by exekutir_vars.yml it will
-#           clobber that same variable for EVERY peon, when kommandir's
-#           job.xn runs, and playbooks haul in kommandir_vars.yml
-
 - name: Kommandir's kommandir_vars.yml exists as a YAML dictionary
   lineinfile:
     dest: "{{ kommandir_workspace }}/kommandir_vars.yml"

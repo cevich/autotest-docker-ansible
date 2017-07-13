@@ -7,18 +7,19 @@
 job_docs_template_src: README
 job_docs_template_dest: README
 
-# This list of keys to be filtered out of exekutir_vars.yml when
-# iitializing kommandir_vars.yml
-kommandir_vars_exclude_keys: >
-  {{ lookup("file", workspace ~ "/roles/installed/defaults/main.yml")
-         | from_yaml | to_json | from_json | list +
-     lookup("file", workspace ~ "/roles/compatible_ansible/defaults/main.yml")
-         | from_yaml | to_json | from_json | list +
-     ['extra_kommandir_setup', 'extra_exekutir_setup', 'job_path', 'kommandir_groups'] +
-     ['stonith', 'kommandir_name_prefix', 'global_lockdir'] }}
+# This list of keys to be filtered out of kommandir_vars.yml if present
+kommandir_vars_exclude_keys:
+  - 'extra_kommandir_setup'
+  - 'extra_exekutir_setup'
+  - 'job_path'
+  - 'kommandir_groups'
+  - 'stonith'
+  - 'kommandir_name_prefix'
+  - 'global_lockdir'
 
 # This list of keys will be overriden in kommandir_vars.yml basedon
-# on the current exekutir values if defined
+# on the current exekutir values if defined (except global_lockdir
+# which is always overriden)
 kommandir_vars_copy_keys:
   - "cleanup_globs"
   - "uuid"
