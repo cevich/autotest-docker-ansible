@@ -2,15 +2,11 @@
 
 ansible_shell_type: sh
 
-peon_groups:
-    - openstack
+host_groups:
     - fedoratomic
-    - updated
-    - docker
-    - autotested
-    - liverestore
+    - docker  # this is docker-latest
 
-peon_image: 'Fedora-Atomic-25'
+peon_image: 'Fedora-Atomic-26'
 
 peon_flavor: 'm1.medium'
 

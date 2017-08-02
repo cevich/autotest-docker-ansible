@@ -10,8 +10,7 @@
   roles:
     - common
     - role: peon_created
-      when: ansible_host | default() not in empty and
-            "recycled" not in group_names
+      when: ansible_host | default() not in empty
     - role: peon_up
       reboot_context: "creation"
   post_tasks:

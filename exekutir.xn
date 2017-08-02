@@ -185,7 +185,7 @@
                     -o "User=$UUID" \
                     -i "$WORKSPACE/ssh/exekutir_key" \
                     "$KOMMANDIR_HOST" \
-                    "./adept.py $ADEPT_CONTEXT . job.xn $ADEPT_OPTIONAL";
+                    "./adept.py $ADEPT_CONTEXT . job.xn $ADEPT_OPTIONAL -e adept_debug=true --verbose";
                 RET=$?
             fi;
 

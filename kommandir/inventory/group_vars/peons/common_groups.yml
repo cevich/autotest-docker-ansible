@@ -1,0 +1,7 @@
+---
+
+# Groups that all peons should belong to
+peon_groups:
+    - openstack
+    - updated
+    - autotested

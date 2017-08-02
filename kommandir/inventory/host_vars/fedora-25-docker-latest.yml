@@ -1,11 +1,8 @@
 ---
 
-peon_groups:
-    - openstack
+host_groups:
     - fedora
-    - updated
-    - docker
-    - autotested
+    - docker  # this is docker-latest
 
 peon_image: 'Fedora-Cloud-25'
 

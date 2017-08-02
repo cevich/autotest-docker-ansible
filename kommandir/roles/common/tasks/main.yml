@@ -36,21 +36,31 @@
   when: 'adept_context == "setup" and inventory_hostname != "kommandir"'
   delegate_to: kommandir
 
+- name: Peons are grouped by contents of their facts which match a regex
+  add_host:
+    name: '{{ inventory_hostname }}'
+    # Collect the contents of all lists named by a regex,
+    # as the list of groups for that peon to join.
+    groups: >
+      {%- set result = [] -%}
+      {%- for elem in hostvars[inventory_hostname] | list -%}
+        {%- if elem | match(".*_groups") -%}
+          {%- if hostvars[inventory_hostname][elem] -%}
+            {%- for gname in hostvars[inventory_hostname][elem] -%}
+              {{ result.append(gname) }}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ result }}
+  with_items: "{{ groups['peons'] }}"
+
 - block:  # when: inventory_hostname == "kommandir"
 
     - name: The kommandir is always a member of the nocloud group
       add_host:
         name: "kommandir"
         groups: "nocloud"
-
-    - name: The kommandir groups all peons from their peon_groups list
-      add_host:
-        name: '{{ item.inventory_hostname }}'
-        groups: '{{ item.peon_groups }}'
-      when: 'item.peon_groups | default() not in empty'
-      with_items: "{{ groups['peons'] | map('extract', hostvars) | list }}"
-      # This one is really noisy
-      no_log: '{{ no_log_synchronize }}'
 
     - name: Kommandir's hostvars are logged into results dir
       blockinfile:

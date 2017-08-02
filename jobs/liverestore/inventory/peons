@@ -1,10 +1,9 @@
-
 # Predefined peons group for use by liverestore job.
 
 [peons]
 
-fedora-25-docker-liverestore
-fedoratomic-25-docker-latest-liverestore
+fedora-25-docker-latest
+fedoratomic-25-docker-latest
 
-rhel7-3-docker-liverestore
-rhelatomic7-3-docker-latest-liverestore
+rhel7-3-docker.yml
+rhelatomic7-3-docker-latest.yml

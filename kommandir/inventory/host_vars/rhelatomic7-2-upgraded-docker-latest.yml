@@ -2,13 +2,9 @@
 
 ansible_shell_type: sh
 
-peon_groups:
-    - openstack
+host_groups:
     - rhelatomic
-    - subscribed
-    - updated
     - docker-latest
-    - autotested
 
 peon_image: 'rhel-atomic-cloud-7.3-released-latest'
 

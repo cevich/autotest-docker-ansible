@@ -1,10 +1,10 @@
 ---
 
 host_groups:
-    - rhel
-    - docker-latest
+    - fedora
+    - docker  # this is docker-latest
 
-peon_image: 'rhel-7.3-server-x86_64-latest'
+peon_image: 'Fedora-Cloud-26'
 
 peon_size: '20'
 

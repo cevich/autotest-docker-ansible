@@ -1,12 +1,8 @@
 ---
 
-peon_groups:
-    - openstack
+host_groups:
     - rhel
-    - subscribed
-    - updated
     - docker-latest
-    - autotested
 
 peon_image: 'rhel-7.2-server-x86_64-released'
 

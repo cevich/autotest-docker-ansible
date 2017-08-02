@@ -2,9 +2,9 @@
 
 host_groups:
     - rhel
-    - docker-latest
+    - docker
 
-peon_image: 'rhel-7.3-server-x86_64-latest'
+peon_image: 'rhel-7.4-server-x86_64-latest'
 
 peon_size: '20'
 
