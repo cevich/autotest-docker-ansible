@@ -16,6 +16,10 @@ kommandir_vars_exclude_keys:
   - 'stonith'
   - 'kommandir_name_prefix'
   - 'global_lockdir'
+  - 'cloud_environment'
+  - 'cloud_asserts'
+  - 'cloud_provisioning_command'
+  - 'cloud_destruction_command'
 
 # This list of keys will be overriden in kommandir_vars.yml basedon
 # on the current exekutir values if defined (except global_lockdir

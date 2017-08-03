@@ -2,9 +2,11 @@
 Autotest-Docker Enabled Product Testing (A.D.E.P.T.)
 =====================================================
 
-ADEPT includes a python program, a collection of ansible playbooks, and
-related configurations.  Together, they help orchestrate a complete
-run of Docker Autotest over one or more local or cloud-based systems.
+ADEPT includes a small python program and a collection of Ansible playbooks, and
+related configurations.  Together, they help orchestrate parallel
+creation, configuration, use and cleanup of ephemeral virtual machines.
+
+.. _the_beginning:
 
 .. _prerequisites:
 
@@ -16,48 +18,46 @@ Prerequisites
 *  PyYAML 3.10 or later
 *  libselinux-python 2.0 or later
 *  rsync 2.5 or later
-*  Ansible_ 2.1 or later
-*  Ansible_ 2.3 or later is required if a
-   slave (a.k.a. *kommandir*) is not used (i.e. ``kommandir_groups: ["nocloud"]``)
+*  Ansible_ 2.1 or later (EPEL)
 *  Root access **not** required
 
 Testing/Development
 --------------------
 
+*  Ansible_ 2.3 or later
 *  python-unittest2 1.0 or later
 *  python2-mock 1.8 or later
 *  pylint 1.4 or later
-*  python-virtualenv or python2-virtualenv
+*  python-virtualenv or python2-virtualenv (EPEL)
 *  Optional (for building documentation), ``make``, ``python-sphinx``,
    and ``docutils`` or equivalent for your platform.
 
-Openstack support:
+OpenStack support:
 -------------------
 
-*  redhat-rpm-config (rpm)
+*  redhat-rpm-config
 *  gcc
-*  python-virtualenv or python2-virtualenv (EPEL rpm)
+*  python-virtualenv or python2-virtualenv (EPEL)
 *  openssl-devel
-*  `Openstack client config credentials`_
+*  `OpenStack client configuration credentials`_
 
 .. _Ansible: http://docs.ansible.com/index.html
 .. _RHEL: http://www.redhat.com/rhel
 .. _CentOS: http://www.centos.org
 .. _Fedora: http://www.fedoraproject.org
-.. _`Openstack client config credentials`: https://docs.openstack.org/developer/os-client-config/
+.. _`OpenStack client configuration credentials`: https://docs.OpenStack.org/developer/os-client-config/
+
 
 Quickstart
 ===========
 
-This demonstration doesn't do anything extraordinarily useful, however it does
-demonstrate ADEPT's essential purpose:
+Ansible 2.3 or later is required, along with the items listed under prerequisites_.
 
-    *Setup an initial state, execute nested playbooks, maintain the state,
-    and reqire only a very small number of dependencies*
-
-In this case, the nested playbooks reside under ``jobs/quickstart``.  One
-playbook is executed for each transition (``setup``, ``run``, ``cleanup``),
-however in this case they're all the same.
+This demonstration doesn't do anything extraordinarily useful. However, it does
+demonstrate ADEPT's essential functions.  The tasks to be performed (the *job*)
+exist as a sparse `standard Ansible directory layout <directory_layout>`_,
+under ``jobs/quickstart``.  All files in the job directory, overwrite identically
+named files under ``kommandir/`` (after a working copy is made).
 
 ::
 
@@ -73,12 +73,10 @@ however in this case they're all the same.
     $ ./adept.py run $WORKSPACE exekutir.xn
     $ ./adept.py cleanup $WORKSPACE exekutir.xn
 
+    # Cleanup the workspace, when you're done looking at it.
+    $ rm -rf $WORKSPACE
+
 **Notes:**
-
-#. Useful output files should be recorded under ``$WORKSPACE/results/``.
-
-#. Nearly everything runs from a copy of the source in ``$WORKSPACE``
-   created during ``setup``.
 
 #. To see select debugging output (select variable values and infos),
    append ``-e adept_debug=true`` onto any of the ``adept.py`` lines above.
@@ -95,7 +93,7 @@ Latest Documentation
 ======================
 
 For the latest, most up to date documentation please visit
-http://autotest-docker-enabled-product-testing.readthedocs.io
+http://autotest-docker-enabled-product-testing.readthedocs.io/en/simplify/
 
 The latest `Docker Autotest`_ documentation is located at:
 http://docker-autotest.readthedocs.io

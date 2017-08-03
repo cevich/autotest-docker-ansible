@@ -52,7 +52,6 @@
     removes: "{{ extra_kommandir_setup.removes | default(omit) }}"
     warn: False
   register: result
-  delegate_to:  "{{ extra_kommandir_setup.delegate | default('exekutir') }}"
   when: extra_kommandir_setup is defined and
         extra_kommandir_setup.command is defined
 
@@ -139,3 +138,4 @@
 - name: Remote Kommandir's workspace files have correct ownership
   command: "chown -R {{ uuid }}.{{ uuid }} {{ kommandir_workspace }}"
   when: "'nocloud' not in group_names"
+

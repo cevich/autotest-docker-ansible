@@ -2,22 +2,22 @@ Examples
 ==============
 
 This section provides examples covering various usages and scenarios.
-They should all be taken as general guidelines, since they easily become
-out of date.  Though if you notice a discrepency, please raise an issue
+They should all be taken as general guidelines, since they easily
+become out of date. If you notice a discrepancy, raise an issue
 regarding it.
-
 
 Adding a public job
 --------------------
 
-This example shows how to add a new job to the ADEPT repository.
-It's possible to store job details elsewhere, but this will be covered
-in another example.
+This example shows how to add a new public job into the ADEPT repository.
+It's possible to store job details elsewhere, as
+`documented here <Adding a private job>`_.
 
-#.  The first step for any new job is to decide on it's name,
-    and what it's speciality is.  Begin by creating a directory
-    to contain it's files, and documentation to describe it's purpose.
-    In this example, a job called ``example`` will be created.
+#.  The first step for any new job is to decide on its `name <job_name>`_,
+    and what its speciality is.  Begin by creating a subdirectory,
+    and a ``README`` (jinja2 template) to describe its purpose.  The ``README``
+    will be rendered into the results directory of the workspace for
+    reference.  In this example, a job called ``example`` will be created.
 
     ::
 
@@ -31,11 +31,13 @@ in another example.
         (src: {{ job_path }}/{{ job_docs_template_src }})
         EOF
 
-#.  Now you need to determine which aspects of the stock *kommandir*
-    ansible directory you want overwritten.  Start with identifying
-    the *peons* you need to run tests against. For this example,
-    we'll stick with the default definitions, but limit the selection
-    to only a single peon.
+#.  Now you need to determine which aspects of
+    `the kommandir directory you want overwritten <directory_layout>`_.
+    Start with identifying the *peons* you need created and setup.
+    For this example, we'll limit the selection to only a single peon.
+    Note, it's also possible to use custom *peon* definitions
+    by also adding/overriding files in the job's ``inventory/host_vars``
+    subdirectory.
 
     ::
 
@@ -100,15 +102,17 @@ in another example.
         $ ln -s ../basic/kommandir_vars.yml ../basic/templates jobs/example/
 
 
-#.  Finally, the last step is to make sure the new job works using a `local (i.e. ``nocloud``)
-    *kommandir*`_.  **Note**: This requires the local system to meet the ``nocloud``
-    *kommandir* :ref:`Prerequisites`.
+#.  Finally, the last step is to make sure the new job works.  This
+    should be performed on a system which meets the
+    `Testing/Development prerequisites <prerequisites>`_.
 
-    .. include:: ex_ws_setup.inc
+    .. include:: ex_ws_setup.inc.rst
 
-    .. include:: clouds_yml.inc
+    .. include:: clouds_yml.inc.rst
 
-    A ``$WORKSPACE/exekutir_vars.yml`` instructs the *exekutir* to run the example job.
+    A simple ``$WORKSPACE/exekutir_vars.yml`` causes the *exekutir*
+    to run the example job.  See the `variables_reference`_ for
+    more details.
 
     ::
 
@@ -125,13 +129,11 @@ in another example.
 
     Then we kick it off.
 
-    .. include:: adept_setup.inc
+    .. include:: adept_setup.inc.rst
 
-    .. include:: adept_run.inc
+    .. include:: adept_run.inc.rst
 
-    .. include:: adept_cleanup.inc
-
-.. _`a local (i.e. ``nocloud``) *kommandir*`: _Local_Kommandir
+    .. include:: adept_cleanup.inc.rst
 
 
 Adding a private job
@@ -139,14 +141,13 @@ Adding a private job
 
 In certain cases, it's desireable for the details of a particular job to live outside of the
 ADEPT repository.  In this case, the steps are exactly the same as `Adding a public job`_
-except for one / possibly-two variable values:
+except for one / possibly-two variables in ``exekutir_vars.yml``:
 
     ::
 
         job_path: /path/to/job/something/else
         job_name: something
 
-    In this example, we also define the ``job_name`` to be ``something``.  Otherwise
-    ADEPT takes the base-name of the ``job_path``, so in this case it would have
-    named the job ``else``.  Either way is fine, this just gives some extra flexibility
-    in naming jobs differently from the directory the reside in.
+Here, it was necessary to set both `job_name`_ and `job_path`_.  If only the later was set,
+the ``job_name`` would have default to ``else`` instead of ``something``.  See the
+`variables_reference`_ for more information

@@ -30,7 +30,8 @@ script:
     # Helps debugging
     - export
     # Test building docs
-    - cd docs && make html; cd ..
+    - cd docs && SPHINXOPTS="-W" make html
+    - cd ..
     - unit2 -vfc
     # Check for some typos / git commit problems (except in this file)
     - for i in $TYPOS; do echo; echo "$i"; git log -p $TRAVIS_COMMIT_RANGE $(ls -1 | grep -v .travis.yml) | grep -a -2 "$i"; test "$?" == "1" || exit 1; done

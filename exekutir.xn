@@ -27,7 +27,6 @@
                 cat << EOF > "$EXEKUTIR_VARS";
         ---
         # Default exekutir_vars.yml created by exekutir.xn
-        job_path: $ADEPT_PATH/jobs/quickstart
         kommandir_groups:
             - nocloud
         uuid: "x$RANDOM"

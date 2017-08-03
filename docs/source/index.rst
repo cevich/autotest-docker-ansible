@@ -5,34 +5,28 @@
 .. toctree::
    :hidden:
 
-   README
-   introduction
-   definitions
-   topology
-   overview
-   hacking
-   variables
-   examples
-   reference
-
-.. include:: README.rst
+.. include:: README.inc.rst
    :end-before: _prerequisites:
 
-.. include:: introduction.rst
+.. include:: introduction.inc.rst
 
-.. include:: ../../README.rst
+.. include:: README.inc.rst
    :start-after: _latest_documentation:
 
-.. include:: definitions.rst
+.. include:: README.inc.rst
+   :start-after: _the_beginning:
+   :end-before: _latest_documentation:
 
-.. include:: topology.rst
+.. include:: definitions.inc.rst
 
-.. include:: overview.rst
+.. include:: topology.inc.rst
 
-.. include:: hacking.rst
+.. include:: overview.inc.rst
 
-.. include:: variables.rst
+.. include:: examples.inc.rst
 
-.. include:: examples.rst
+.. include:: hacking.inc.rst
 
-.. include:: reference.rst
+.. include:: variables.inc.rst
+
+.. include:: reference.inc.rst
