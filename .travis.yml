@@ -22,6 +22,8 @@ env:
         - PATH="$PATH:$VIRTUAL_ENV/bin"
 
 install:
+    - sudo apt-get -qq update
+    - sudo apt-get -qq install realpath
     # These seem to match up roughly with behavior on RHEL 7
     - pip install Sphinx==1.2.2 unittest2==1.1.0 pylint==1.4.5 virtualenv==15.1.0
     - pip install -r requirements.txt

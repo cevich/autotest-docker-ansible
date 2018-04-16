@@ -1,22 +1,23 @@
 # N/B: Hashes are required here | versions frozen for stability
 
-ansible==2.4.1.0 --hash=sha256:da61afb29cc5bd6bc4737a2da06e673fb6fccc3ae2685130d19ab3a8e404fb6a
-
-ansible-lint==3.4.17 --hash=sha256:9cebc110019f52a7dd66cb785d99d43b556f246c3046661b00c7bcfe74a9504d
+ansible==2.4.2.0 --hash=sha256:315f1580b20bbc2c2f1104f8b5e548c6b4cac943b88711639c5e0d4dfc4d7658
 
 asn1crypto==0.23.0 --hash=sha256:654b7db3b120e23474e9a1e5e38d268c77e58a9e17d2cb595456c37309846494
 
 bcrypt==3.1.4 --hash=sha256:a005ed6163490988711ff732386b08effcbf8df62ae93dd1e5bda0714fad8afb \
               --hash=sha256:2788c32673a2ad0062bea850ab73cffc0dba874db10d7a3682b6f2f280553f20 \
-              --hash=sha256:49e96267cd9be55a349fd74f9852eb9ae2c427cd7f6455d0f1765d7332292832
+              --hash=sha256:49e96267cd9be55a349fd74f9852eb9ae2c427cd7f6455d0f1765d7332292832 \
+              --hash=sha256:ae35dbcb6b011af6c840893b32399252d81ff57d52c13e12422e16b5fea1d0fb
 
 cffi==1.11.2 --hash=sha256:89829f5cfbcb5ad568a3d61bd23a8e33ad69b488d8f6a385e0097a4c20742a9b \
              --hash=sha256:d7461ef8671ae40f991384bbc4a6b1b79f4e7175d8052584be44041996f46517 \
-             --hash=sha256:5f96c92d5f5713ccb71e76dfa14cf819c59ecb9778e94bcb541e13e6d96d1ce5
+             --hash=sha256:5f96c92d5f5713ccb71e76dfa14cf819c59ecb9778e94bcb541e13e6d96d1ce5 \
+             --hash=sha256:062c66dabc3faf8e0db1ca09a6b8e308846e5d35f43bed1a68c492b0d96ac171
 
 cryptography==2.1.3 --hash=sha256:35eb35340fdc0b772301f9de985db8d732f3c79dbd647d06b9a8e4e111b53950 \
                     --hash=sha256:1fc1c6ad9f04871399de407a4f0f555adba5c7ec68068fd27d7ceee9e493755c \
-                    --hash=sha256:2d72c8cd1e2be9942052b85b1481c74b2eb36780889696ce66afe602c04b9c67
+                    --hash=sha256:2d72c8cd1e2be9942052b85b1481c74b2eb36780889696ce66afe602c04b9c67 \
+                    --hash=sha256:791e228b5df8f124bfa33384195864cb9f5420b619580258d9002f14e625312e
 
 enum34==1.1.6 --hash=sha256:644837f692e5f550741432dd3f223bbb9852018674981b1664e5dc339387588a \
               --hash=sha256:6bd0f6ad48ec2aa117d3d141940d484deccda84d4fcd884f5c3d93c23ecd8c79
@@ -40,16 +41,18 @@ pycrypto==2.6.1 --hash=sha256:f2ce1e989b272cfcb677616763e0a2e7ec659effa67a88aa92
 
 PyNaCl==1.2.0 --hash=sha256:8e194ea19c447c4caa94a84316412ad11cfb61f029d408fd4bdc1164ec694578 \
               --hash=sha256:b83e4232b43a52c8802234d575f992f82c1e9c466acd911983613a3823c4dc4e \
-              --hash=sha256:189410422028e7b0543dee6aca3da026bbd66bbad078143c46c5a3faf2733acb
+              --hash=sha256:189410422028e7b0543dee6aca3da026bbd66bbad078143c46c5a3faf2733acb \
+              --hash=sha256:77c3b6d6fbf8b2137d41be9aed9eff30232287aeba00a6d353aa48fc9de4c55e
 
 PyYAML==3.12 --hash=sha256:592766c6303207a20efc445587778322d7f73b161bd994f227adaa341ba212ab
+
+pip==9.0.1 --hash=sha256:690b762c0a8460c303c089d5d0be034fb15a5ea2b75bdf565f40421f542fefb0
 
 six==1.11.0 --hash=sha256:832dc0e10feb1aa2c68dcc57dbb658f1c7e65b9b61af69048abc87a2db00a0eb
 
 virtualenv==15.1.0 --hash=sha256:39d88b533b422825d644087a21e78c45cf5af0ef7a99a1fc9fbb7b481e5c85b0
 
-pip==9.0.1 --hash=sha256:690b762c0a8460c303c089d5d0be034fb15a5ea2b75bdf565f40421f542fefb0
-
-virtualenv==15.1.0 --hash=sha256:39d88b533b422825d644087a21e78c45cf5af0ef7a99a1fc9fbb7b481e5c85b0
-
-pip==9.0.1 --hash=sha256:690b762c0a8460c303c089d5d0be034fb15a5ea2b75bdf565f40421f542fefb0
+# Shave a tiny amount (seconds) off of the install time
+# by using pre-built binaries.
+--only-binary ':all:'
+--no-binary 'ansible,MarkupSafe,pycparser,pycrypto,PyYAML'
