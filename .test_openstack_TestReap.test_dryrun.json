@@ -29,7 +29,7 @@
     "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
     "response": {
       "server": {
-        "metadata": { "preserve": "-1" },
+        "metadata": { "preserve": "1" },
         "OS-SRV-USG:launched_at": "2001-01-01T01:01:01.01",
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:vm_state": "active",
@@ -75,7 +75,7 @@
     "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
     "response": {
       "server": {
-        "metadata": { "preserve": "-1" },
+        "metadata": { "preserve": "1" },
         "OS-SRV-USG:launched_at": "2001-01-01T01:01:01.01",
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:vm_state": "active",
@@ -134,7 +134,7 @@
     "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
     "response": {
       "server": {
-        "metadata": { "preserve": "-1" },
+        "metadata": { "preserve": "1" },
         "OS-SRV-USG:launched_at": "2001-01-01T01:01:01.01",
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:vm_state": "active",

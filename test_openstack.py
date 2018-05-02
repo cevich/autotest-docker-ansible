@@ -594,15 +594,15 @@ class TestReap(TestDiscoverCreateDestroyBase):
         """Stand-in for actual destruction function"""
         self.destroy_dargs = dargs
 
-    def test_verbose(self):
+    def test_dryrun(self):
         """Verify verbose mode destroys no servers"""
         with self.patched:
             self.uut.discover('foobar')
-            self.uut.reap(verbose=True)
+            self.uut.reap(**{"dry-run": True})  # function keyword has hyphen
             self.uut.discover('foobar')
             self.certify_stdout('foobar', '6.7.8.9')
             self.assertEqual(self.fake_session.resp_mocks, [], self.leftovers())
-            self.assertEqual(self.destroy_dargs, None)  # never called
+            self.assertEqual(self.destroy_dargs, None)  # destroy never called
 
     def test_death(self):
         """Verify expired server is destroyed"""

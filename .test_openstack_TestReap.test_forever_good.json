@@ -1,1 +1,163 @@
-.test_openstack_TestReap.test_verbose.json
+[
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 0,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 5,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+    "response": {
+      "server": {
+        "metadata": { "preserve": "-1" },
+        "OS-SRV-USG:launched_at": "2001-01-01T01:01:01.01",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "4.3.2.1",
+              "version": 4
+            },
+            {
+              "OS-EXT-IPS:type": "floating",
+              "addr": "6.7.8.9",
+              "version": 4
+            }
+          ]
+        },
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "status": "ACTIVE",
+        "name": "foobar"
+      }
+    },
+    "sequence_number": 10,
+    "status_code": 200
+  },
+
+
+
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 15,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+    "response": {
+      "server": {
+        "metadata": { "preserve": "-1" },
+        "OS-SRV-USG:launched_at": "2001-01-01T01:01:01.01",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "4.3.2.1",
+              "version": 4
+            },
+            {
+              "OS-EXT-IPS:type": "floating",
+              "addr": "6.7.8.9",
+              "version": 4
+            }
+          ]
+        },
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "status": "ACTIVE",
+        "name": "foobar"
+      }
+    },
+    "sequence_number": 20,
+    "status_code": 200
+  },
+
+
+
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 30,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers",
+    "response": {
+      "servers": [
+        {
+          "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+          "name": "foobar"
+        }
+      ]
+    },
+    "sequence_number": 35,
+    "status_code": 200
+  },
+  {
+    "GET": "http://1.2.3.4/servers/8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+    "response": {
+      "server": {
+        "metadata": { "preserve": "-1" },
+        "OS-SRV-USG:launched_at": "2001-01-01T01:01:01.01",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:vm_state": "active",
+        "addresses": {
+          "network_name": [
+            {
+              "OS-EXT-IPS:type": "fixed",
+              "addr": "4.3.2.1",
+              "version": 4
+            },
+            {
+              "OS-EXT-IPS:type": "floating",
+              "addr": "6.7.8.9",
+              "version": 4
+            }
+          ]
+        },
+        "id": "8d36cf2d-de3d-4cc7-9b51-b6bc48cffe06",
+        "status": "ACTIVE",
+        "name": "foobar"
+      }
+    },
+    "sequence_number": 40,
+    "status_code": 200
+  }
+]

@@ -44,13 +44,13 @@ DESCRIPTION = ('Low dependency script called by ADEPT playbooks'
                ' to manage OpenStack VMs.')
 
 EPILOG = ('Required:  The WORKSPACE environment variable must exist and point to a'
-          ' writeable directory.  The script must be invoked by link (or symlink)'
+          ' writable directory.  The script must be invoked by link (or symlink)'
           ' named "%s", "%s", "%s", or "%s".'
           ' If named "%s", VM creation will'
           ' fail if another with the same name already exist.'
           % tuple(list(ALLOWED_NAMES) + [ONLY_CREATE_NAME]))
 
-# Needed for unitesting so argparse doesn't call system.exit()
+# Needed for unittesting so argparse doesn't call system.exit()
 ENABLE_HELP = True
 
 # Placeholder, will be set by unittests or under if __name__ == '__main__'
@@ -117,7 +117,7 @@ PIP_NO_BINARY = ['wrapt', 'PyYAML', 'positional', 'warlock',
 # Directory path relative to virt. env. dir for signaling completion
 PIP_CHECKPATH = 'lib/python2.7/site-packages/os_client_config'
 
-# Exit code to return when --help output is displayed (for unitesting)
+# Exit code to return when --help output is displayed (for unittesting)
 HELP_EXIT_CODE = 127
 
 DEFAULT_TIMEOUT = 300
@@ -968,7 +968,7 @@ def reap(**dargs):
             if expires_at > now:
                 logging.info("Server %s has %s remaining", server_name, expires_at - now)
                 continue
-            if dargs.get('verbose', False):
+            if dargs.get('dry-run', False):
                 logging.info("Would have destroyed %s", server_name)
             else:
                 logging.info("Destroying %s", server_name)
@@ -1068,8 +1068,8 @@ def parse_args(argv, operation='help'):
         parser.add_argument('--preserve', default=DEFAULT_PRESERVE, type=int,
                             help='The number of hours beyond one, before'
                                  ' running "%s" would force deletion.'
-                                 ' Set to "0" for indefinate, otherwise defaults to'
-                                 ' %s (Optional).  Takes no action in --verbose'
+                                 ' Set to "0" for indefinite, otherwise defaults to'
+                                 ' %s (Optional).  Takes no action in --dry-run'
                                  ' mode.' % (REAP_NAME, DEFAULT_PRESERVE))
 
         parser.add_argument('--size', '-s', default=None, type=int,
@@ -1088,9 +1088,13 @@ def parse_args(argv, operation='help'):
                                   ' executions.'))
 
     # All operations get these
+    parser.add_argument('--dry-run', '-n', default=False,
+                        action='store_true',
+                        help=('Perform no actual cleanup or other actions, simply'
+                              ' display the actions that would have been taken.'))
     parser.add_argument('--verbose', '-v', default=False,
                         action='store_true',
-                        help='Increate logging verbosity to maximum.')
+                        help='Increase logging verbosity to maximum.')
 
     parser.add_argument('--timeout', '-t', default=DEFAULT_TIMEOUT, type=int,
                         help=('Major operations timeout (default %s) in seconds'
@@ -1117,7 +1121,7 @@ def parse_args(argv, operation='help'):
     args = parser.parse_args(argv)
     logging.debug("Parsed arguments: %s", args)
 
-    # Encode as dictionary, makes parameter passing easier to unitest
+    # Encode as dictionary, makes parameter passing easier to unittest
     dargs = dict([(n, getattr(args, n))
                   for n in args.__dict__.keys()  # no better way to do ths
                   if n[0] != '_'])
@@ -1191,7 +1195,7 @@ def api_debug_dump():
             lines.append({response.request.method: response.request.url})
             lines[-1]['response'] = response.json()
             lines[-1]['status_code'] = response.status_code
-            # These are useful for creating unitest data + debugging unittests
+            # These are useful for creating unittest data + debugging unittests
             lines[-1]['sequence_number'] = seq_num
             seq_num += 10
         except (ValueError, AttributeError):
@@ -1287,7 +1291,7 @@ def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
     :param venvdir: Directory path to contain virtual environment and packages
     :param requirements: List of pip packages and optionally, version requirements.
     :param onlybin: List of pip packages to only install pre-built binaries or
-                    magic item ':all:' wildcard (overriden by ``nobin``)
+                    magic item ':all:' wildcard (overridden by ``nobin``)
     :param nobin: List of pip packages to build and install (overrides onlybin)
     """
     fmt = "Timeout acquiring %s lock"
