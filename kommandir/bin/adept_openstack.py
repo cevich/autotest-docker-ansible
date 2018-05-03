@@ -418,8 +418,9 @@ class OpenstackREST(Singleton):
             launch_stamp = datetime.datetime.strptime(launched_at,
                                                       iso18601fmt).replace(microsecond=0)  # don't care
         except (TypeError, ValueError):
-            logging.error("Error parsing server %s launched_at stamp %s",
-                          uuid, launched_at)
+            logging.warning("Invalid server '%s' launched_at stamp '%s',"
+                            " perhaps it's being created/destroyed?",
+                            server_details.get('name', uuid), launched_at)
             return None
 
         try:
@@ -959,6 +960,10 @@ def reap(**dargs):
     """
     Destroy running VMs older than their preserve value plus one (hours)
     """
+    dry_run = False
+    if dargs.get('dry_run', False):  # argparse converts dry-run -> dry_run
+        logging.info("Reaper operating in dry-run mode, no actions will be taken")
+        dry_run = True
     os_rest = OpenstackREST()
     for server_id in os_rest.server_list(key='id'):
         expires_at = os_rest.server_expires_at(server_id)
@@ -968,7 +973,7 @@ def reap(**dargs):
             if expires_at > now:
                 logging.info("Server %s has %s remaining", server_name, expires_at - now)
                 continue
-            if dargs.get('dry-run', False):
+            if dry_run:
                 logging.info("Would have destroyed %s", server_name)
             else:
                 logging.info("Destroying %s", server_name)
@@ -1367,7 +1372,7 @@ if __name__ == '__main__':  # pylint: disable=C0103
     if _dargs['verbose']:
         logger.setLevel(logging.DEBUG)
     else:
-        # Lower to INFO level and higher for general details
+        # Lower to WARNING level and higher to not scare normal users
         logger.setLevel(logging.WARNING)
     del logger  # keep global namespace clean
 
@@ -1377,13 +1382,6 @@ if __name__ == '__main__':  # pylint: disable=C0103
                                           PIP_ONLY_BINARY,
                                           PIP_NO_BINARY)
     logging.info("Loaded %s", os.path.dirname(os_client_config.__file__))
-    # Shut down the most noisy loggers
-    for noisy_logger in ('stevedore.extension',
-                         'keystoneauth.session',
-                         'requests.packages.urllib3.connectionpool'):
-        shut_me_up = logging.getLogger(noisy_logger)
-        shut_me_up.setLevel(logging.WARNING)
-
     # Shut down the most noisy loggers
     for noisy_logger in ('stevedore.extension',
                          'keystoneauth.session',
