@@ -148,8 +148,8 @@ class Flock(object):
         # __enter__
         start = time()
         lockfile = self.lock(op)
-        logging.info("    %d acquired %s lock in %0.4fs",
-                     os.getpid(), name, time() - start)
+        logging.debug("    %d acquired %s lock in %0.4fs",
+                      os.getpid(), name, time() - start)
         try:
             yield open(lockfile.name, 'rb')
         finally:
@@ -180,8 +180,8 @@ class Flock(object):
         # __enter__
         start = time()
         lockfile = self.lock_timeout(timeout, op)
-        logging.info("    %d acquired %s lock before timeout, waited %0.4fs",
-                     os.getpid(), name, time() - start)
+        logging.debug("    %d acquired %s lock before timeout, waited %0.4fs",
+                      os.getpid(), name, time() - start)
         if lockfile:
             yield open(lockfile.name, 'rb')
         else:
@@ -218,7 +218,7 @@ def _umpa_lumpa(n):
     _flock = Flock('/tmp/doopitydoo.lock')
     method = random.choice([_flock.acquire_read, _flock.acquire_write])
     with method():
-        logging.info("    %d(%d) is doing some important work", n, os.getpid())
+        logging.debug("    %d(%d) is doing some important work", n, os.getpid())
         sleep(1 + float(random.randrange(0, 100) / 100))
 
 
@@ -232,7 +232,7 @@ def _make_candy():
     random.shuffle(procs)
     for proc in procs:
         proc.join()
-    logging.info("MOARRRSUGARRRRR!")
+    logging.debug("MOARRRSUGARRRRR!")
 
 
 if __name__ == '__main__':
@@ -240,7 +240,7 @@ if __name__ == '__main__':
         LOGGER = logging.getLogger()
         # Lower to DEBUG for massively detailed output
         LOGGER.setLevel(logging.DEBUG)
-        logging.info("Charlie?")
+        logging.debug("Charlie?")
         _make_candy()
     finally:
         os.unlink('/tmp/doopitydoo.lock')

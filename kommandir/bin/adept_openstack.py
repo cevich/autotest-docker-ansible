@@ -138,6 +138,34 @@ ansible_connection: ssh
 WORKSPACE_LOCKFILE_PREFIX = '.adept_job_workspace'
 GLOBAL_LOCKFILE_PREFIX = '.adept_global_floatingip'
 
+
+class VerboseFilter(logging.Filter):
+    """
+    Special case filter for logging INFO messages.
+
+    For the most part we log everything, but we allow two levels of INFO:
+    always-print, and verbose-only. This gives us higher-than-default
+    logging without the noise of DEBUG.
+
+    By default we run at log level INFO but only pass through messages
+    that do not begin with '>'. With --verbose, we pass those through
+    as well. We always remove the leading '>' and any leading whitespace.
+    """
+    def __init__(self, logging_level, verbose):
+        super(VerboseFilter, self).__init__()
+        self.level = logging_level
+        self.verbose = verbose
+
+    def filter(self, record):
+        # Always strip leading '>', no matter what level we're at
+        if record.msg.startswith('>'):
+            record.msg = record.msg.lstrip('>').lstrip()
+            # When logging at INFO level (default), allow these only if verbose
+            if self.level == logging.INFO and record.levelno == self.level:
+                return self.verbose
+        return record.levelno >= self.level
+
+
 class Singleton(object):
     """
     Base class for singletons, every instantiated class is the same object
@@ -569,7 +597,7 @@ class TimeoutDelete(TimeoutAction):
         """Return remaining ids when server_id not found, None if still present."""
         server_ids = self.os_rest.server_list(key='id')
         if server_id in server_ids:
-            logging.info("    Deleting %s", server_id)
+            logging.info(">    Deleting %s", server_id)
             return None
         logging.info("Confirmed VM %s does not exist", server_id)
         return server_ids
@@ -663,7 +691,7 @@ class TimeoutCreate(TimeoutAction):
         if self.os_rest.server_list().count(name) > 1:
             raise RuntimeError("More than one server %s found during creation", name)
 
-        logging.info("Submitting creation request for %s", name)
+        logging.info(">Submitting creation request for %s", name)
         self.os_rest.compute_request('/servers', 'server',
                                      'post', post_json=dict(server=server_json))
         server_id = self.os_rest.response_json['id']
@@ -681,7 +709,7 @@ class TimeoutCreate(TimeoutAction):
         vm_state = server_details['OS-EXT-STS:vm_state']
         power_state = self.POWERSTATES.get(server_details['OS-EXT-STS:power_state'],
                                            'UNKNOWN')
-        logging.info("     id: %s: %s, power %s", server_id, vm_state, power_state)
+        logging.info(">     id: %s: %s, power %s", server_id, vm_state, power_state)
         self.os_rest.raise_if(power_state == 'UNKNOWN',
                               RuntimeError,
                               "Got unknown power-state '%s' from response JSON"
@@ -706,7 +734,7 @@ class TimeoutAssignFloatingIP(TimeoutAction):
         net_name = router_details['name']
         gw_info = router_details['external_gateway_info']
         net_id = gw_info['network_id']
-        logging.info("Router %s maps to network id %s", net_name, net_id)
+        logging.info(">Router %s maps to network id %s", net_name, net_id)
         super(TimeoutAssignFloatingIP, self).__init__(server_id, net_name, net_id)
 
     def _am_done(self, server_id, net_name, net_id):
@@ -719,7 +747,7 @@ class TimeoutAssignFloatingIP(TimeoutAction):
         try:
             with OpenstackLock().timeout_acquire_read(self.timeout_remaining()) as osl:
                 ip_addr = self.os_rest.server_ip(uuid=server_id, net_name=net_name)
-                logging.info("    IP %s assigned", ip_addr)
+                logging.info(">    IP %s assigned", ip_addr)
                 return ip_addr
         except (ValueError, IndexError, KeyError):
             with OpenstackLock().timeout_acquire_write(self.timeout_remaining()) as osl:
@@ -727,9 +755,9 @@ class TimeoutAssignFloatingIP(TimeoutAction):
                     raise self.timeout_exception("Timeout acquiring lock")
                 floating_ip = self.os_rest.floating_ip()  # Get dis-used IP
                 if not floating_ip:  # Didn't get one, must create new
-                    logging.info("    creating new floating IP to %s", net_name)
+                    logging.info(">    creating new floating IP to %s", net_name)
                     floating_ip = self.os_rest.create_floating_ip(net_id)
-                logging.info("    Assigning %s to server id %s",
+                logging.info(">    Assigning %s to server id %s",
                              floating_ip, server_id)
                 addfloatingip = dict(address=floating_ip)
                 try:
@@ -737,7 +765,7 @@ class TimeoutAssignFloatingIP(TimeoutAction):
                                                  unwrap=None, method='post',
                                                  post_json=dict(addFloatingIp=addfloatingip))
                 except ValueError:
-                    logging.info("    Assignment failed")
+                    logging.info(">    Assignment failed")
                 return None  # Check if ip successfully assigned
 
     def am_done(self, server_id, net_name, net_id):
@@ -766,7 +794,7 @@ class TimeoutAttachVolume(TimeoutAction):
                       description='Created for %s (%s)' % (server_name, server_id))
         # Try to allocate storage on same host as server
         scheduler_hints = dict(same_host=[server_id])
-        logging.info("Creating %sGB volume for VM %s", size, server_name)
+        logging.info(">Creating %sGB volume for VM %s", size, server_name)
         post_json = {'volume': volume,
                      'OS-SCH-HNT:scheduler_hints': scheduler_hints}
         self.os_rest.volume_request('/volumes', 'volume',
@@ -786,7 +814,7 @@ class TimeoutAttachVolume(TimeoutAction):
             return None  # Volume doesn't exist or data is bad
         attachments = self.os_rest.attachments(uuid=server_id)
         attached_to_server = volume_id in attachments
-        logging.info("     %s(%s): attached: %s)",
+        logging.info(">     %s(%s): attached: %s)",
                      volume_id, status, attached_to_server)
         if not self.attach_requested and status.lower() != 'available':
             return None
@@ -841,13 +869,14 @@ class TimeoutDeleteVolume(TimeoutAction):
                             volume_details.get('name', volume_id),
                             attachments)
             return volume_details  # bail out!
-        logging.info("     Deleting volume %s: status %s",
+        logging.info(">     Deleting volume %s: status %s",
                      volume_id, volume_details['status'])
         try:  # Prevent TOCTOU: id vanishes before query
             self.os_rest.volume_request('/volumes/%s' % volume_id,
                                         unwrap=None, method='delete')
         except Exception:
             return volume_details  # Removal was the goal
+        logging.info("     Deleted volume %s", volume_id)
         return None  # try again
 
 
@@ -873,7 +902,7 @@ def discover(name=None, uuid=None, router_name=None, private=False, **dargs):
     else:
         raise RuntimeError("Must pass name and/or uuid to discover()")
 
-    logging.info("Trying to discover server %s", thing)
+    logging.info(">Trying to discover server %s", thing)
 
     nr_found = os_rest.server_list().count(name)
     if nr_found == 1:
@@ -900,7 +929,7 @@ def _destroy_volumes(volume_ids, server_id):
     # It's possible volume wasn't attached yet
     try:
         volumes = os_rest.volume_list()
-        logging.info("Searching for orphan volumes.")
+        logging.info(">Searching for orphan volumes.")
         for volume in volumes:
             if volume in volume_ids:
                 continue
@@ -913,7 +942,7 @@ def _destroy_volumes(volume_ids, server_id):
     except (ValueError, IndexError):
         pass  # Volume named with server_id doesn't exist
     if volume_ids:
-        logging.info("Deleting leftover volumes:")
+        logging.info("Deleting volumes:")
         for volume_id in volume_ids:
             TimeoutDeleteVolume(volume_id)()
 
@@ -929,16 +958,11 @@ def destroy(name=None, uuid=None, **dargs):
     os_rest = OpenstackREST()
 
     # Prefer to operate on ID's because they can never race/clash
-    if uuid:
-        thing = uuid
-    elif name:
-        thing = name
+    if name:
         if os_rest.server_list().count(name) > 1:
             raise RuntimeError("More than one server %s found", name)
-    else:
+    elif uuid is None:
         raise ValueError("Must pass name and/or uuid to destroy()")
-
-    logging.info("Deleting VM %s", thing)
 
     server_id = None
     volume_ids = []
@@ -966,7 +990,7 @@ def reap(**dargs):
         now = datetime.datetime.utcnow()
         try:
             if expires_at > now:
-                logging.info("Server %s has %s remaining", server_name, expires_at - now)
+                logging.info(">Server %s has %s remaining", server_name, expires_at - now)
                 continue
             if dargs.get('dry-run', False):
                 logging.info("Would have destroyed %s", server_name)
@@ -974,7 +998,7 @@ def reap(**dargs):
                 logging.info("Destroying %s", server_name)
                 destroy(uuid=server_id)
         except Exception:
-            logging.info("Server %s has indefinite lifetime", server_name)
+            logging.info(">Server %s has indefinite lifetime", server_name)
 
 
 # Arguments come from argparse, listing them all for clarity of intent
@@ -999,7 +1023,7 @@ def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
     del dargs  # not otherwise used
     pubkeys = []
     for pub_key_file in pub_key_files:
-        logging.info("Loading public key file: %s", pub_key_file)
+        logging.info(">Loading public key file: %s", pub_key_file)
         with open(pub_key_file, 'rb') as key_file:
             pubkeys.append(key_file.read().strip())
             if 'PRIVATE KEY' in pubkeys[-1]:
@@ -1012,15 +1036,15 @@ def create(name, pub_key_files, image, flavor,  # pylint: disable=R0913
         # TODO: maybe just pass in a dictionary full of parameters?
         # pylint: disable=E1121
         server_id = TimeoutCreate(name, pubkeys, image, flavor, userdata_filepath, preserve)()
-        logging.info("Creation successful, VM %s id %s", name, server_id)
+        logging.info(">Creation successful, VM %s id %s", name, server_id)
 
         if size:
-            logging.info("Attempting to create and attach %sGB size volume", size)
+            logging.info("Creating and attaching %sGB volume", size)
             # name is added to volume description
             TimeoutAttachVolume(name, server_id, int(size))()
 
         if not private:
-            logging.info("Attempting to assign floating ip on network %s", router_name)
+            logging.info(">Attempting to assign floating ip on network %s", router_name)
             TimeoutAssignFloatingIP(server_id, router_name)()
         discover(name=name, uuid=server_id, router_name=router_name, private=private)
 
@@ -1088,11 +1112,11 @@ def parse_args(argv, operation='help'):
                                   ' executions.'))
 
     # All operations get these
-    parser.add_argument('--dry-run', '-n', default=False,
-                        action='store_true',
-                        help=('Perform no actual cleanup or other actions, simply'
-                              ' display the actions that would have been taken.'))
     parser.add_argument('--verbose', '-v', default=False,
+                        action='store_true',
+                        help='Increase logging verbosity.')
+
+    parser.add_argument('--debug', '-d', default=False,
                         action='store_true',
                         help='Increase logging verbosity to maximum.')
 
@@ -1103,6 +1127,11 @@ def parse_args(argv, operation='help'):
     if operation != 'reap':
         parser.add_argument('name',
                             help='The VM name to search for, create, or destroy (required)')
+    else:
+        parser.add_argument('--dry-run', '-n', default=False,
+                            action='store_true',
+                            help=('Perform no actual cleanup or other actions, simply'
+                                  ' display the actions that would have been taken.'))
 
     # Consumer of remaining arguments must come last
     if operation not in ('destroy', 'reap'):
@@ -1134,7 +1163,7 @@ def parse_args(argv, operation='help'):
     # Add operation for reference
     dargs['operation'] = operation
 
-    logging.info("Processed arguments: %s", dargs)
+    logging.info(">Processed arguments: %s", dargs)
 
     return dargs
 
@@ -1167,7 +1196,7 @@ def main(argv, dargs, service_sessions):
             logging.debug("%s: %s", xcept.__class__.__name__, str(xcept))
             try:
                 OpenstackREST(service_sessions)
-                logging.info('Attempting to create new VM %s.', dargs['name'])
+                logging.info('Creating new VM %s.', dargs['name'])
                 create(**dargs)
             except:
                 logging.error("Original discovery-exception,"
@@ -1208,7 +1237,7 @@ def api_debug_dump():
     import json as simplejson
     with open(filepath, 'wb') as debugf:
         simplejson.dump(lines, debugf, indent=2, sort_keys=True)
-    logging.info("Recorded all response JSONs into: %s", filepath)
+    logging.info(">Recorded all response JSONs into: %s", filepath)
 
 
 def _pip_upgrade_install(venvdir, requirements, onlybin, nobin):
@@ -1230,7 +1259,7 @@ def _pip_upgrade_install(venvdir, requirements, onlybin, nobin):
     # Sometimes there are glitches, retry this a few times
     tries = 0
     for tries in xrange(3):
-        logging.info("Installing packages (try %d): %s", tries, ' '.join(pargs))
+        logging.info(">Installing packages (try %d): %s", tries, ' '.join(pargs))
         try:
             logging.debug(subprocess.check_output(pargs,
                                                   close_fds=True, env=os.environ,
@@ -1252,17 +1281,17 @@ def _install(venvdir):
     sfx = "virtual environment under %s" % venvdir
     try:
         if not os.path.isdir(venvdir):
-            logging.info("Setting up new %s", sfx)
+            logging.info(">Setting up new %s", sfx)
             virtualenv.create_environment(venvdir, site_packages=False)
         else:
-            logging.info("Using existing %s", sfx)
+            logging.info(">Using existing %s", sfx)
     except:
         shutil.rmtree(venvdir, ignore_errors=True)
         raise
 
 
 def _activate(namespace, venvdir):
-    logging.info("Activating %s", venvdir)
+    logging.info(">Activating %s", venvdir)
     old_file = namespace['__file__']  # activate_this checks __file__
     try:
         namespace['__file__'] = os.path.join(venvdir, 'bin', 'activate_this.py')
@@ -1364,11 +1393,11 @@ if __name__ == '__main__':  # pylint: disable=C0103
 
     # Allow early debugging/verbose mode
     logger = logging.getLogger()
-    if _dargs['verbose']:
-        logger.setLevel(logging.DEBUG)
-    else:
-        # Lower to INFO level and higher for general details
-        logger.setLevel(logging.WARNING)
+    level = logging.INFO
+    if _dargs['debug']:
+        level = logging.DEBUG
+    logger.setLevel(level)
+    logger.addFilter(VerboseFilter(level, _dargs['verbose']))  # --verbose managed here
     del logger  # keep global namespace clean
 
     os_client_config = activate_and_setup(globals(),
@@ -1377,13 +1406,6 @@ if __name__ == '__main__':  # pylint: disable=C0103
                                           PIP_ONLY_BINARY,
                                           PIP_NO_BINARY)
     logging.info("Loaded %s", os.path.dirname(os_client_config.__file__))
-    # Shut down the most noisy loggers
-    for noisy_logger in ('stevedore.extension',
-                         'keystoneauth.session',
-                         'requests.packages.urllib3.connectionpool'):
-        shut_me_up = logging.getLogger(noisy_logger)
-        shut_me_up.setLevel(logging.WARNING)
-
     # Shut down the most noisy loggers
     for noisy_logger in ('stevedore.extension',
                          'keystoneauth.session',
@@ -1413,5 +1435,5 @@ if __name__ == '__main__':  # pylint: disable=C0103
     try:
         main(sys.argv, _dargs, sessions)
     finally:
-        if _dargs['verbose']:
+        if _dargs['debug']:
             api_debug_dump()
