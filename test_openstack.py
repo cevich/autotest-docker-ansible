@@ -185,18 +185,20 @@ class TestParsedArgs(TestCaseBase):
         """Check expected minimum arguments parse in predictable way"""
         # input
         op_argv = dict(destroy=['binary', 'foo',],
-                       create=['binary', 'foo', 'bar', 'baz'],
-                       discover=['binary', 'baz', 'baz', 'bar'])
+                       exclusive_create=['binary', 'foo', 'bar', 'baz'],
+                       discover_create=['binary', 'baz', 'baz', 'bar'])
 
         # output
         destroy = dict(name='foo')
-        create = dict(name='foo', image='CentOS-Cloud-7',
-                      flavor='m1.medium', private=False)
-        discover = dict(name='baz', image='CentOS-Cloud-7',
-                        flavor='m1.medium', private=False)
-        op_expected = dict(destroy=destroy, create=create, discover=discover)
+        exclusive_create = dict(name='foo', image='CentOS-Cloud-7',
+                                flavor='m1.medium', private=False)
+        discover_create = dict(name='baz', image='CentOS-Cloud-7',
+                               flavor='m1.medium', private=False)
+        op_expected = dict(destroy=destroy,
+                           exclusive_create=exclusive_create,
+                           discover_create=discover_create)
 
-        for operation in ('destroy', 'create', 'discover'):
+        for operation in ('destroy', 'exclusive_create', 'discover_create'):
             parsed_args = self.uut.parse_args(op_argv[operation], operation)
             with self.subTest(operation=operation, expected=op_expected[operation],
                               parsed_args=parsed_args):
@@ -221,8 +223,8 @@ class TestMain(TestCaseBase):
 
     def test_discover(self):
         """Test main calls discover function"""
-        self.uut.main([self.uut.DISCOVER_CREATE_NAME, 'foobar', 'snafu'],
-                      dict(operation='discover', name='foobar'),
+        self.uut.main(['openstack_discover_create.py', 'foobar', 'snafu'],
+                      dict(operation='discover_create', name='foobar'),
                       self.service_sessions)
         self.assertFalse(self.destroy.called)
         self.assertFalse(self.create.called)
@@ -233,9 +235,9 @@ class TestMain(TestCaseBase):
         # When discovery fails, create is called.
         self.discover.side_effect = IndexError("Unittest error message")
         with self.assertLogs(level='WARNING') as context:
-            self.uut.main([self.uut.DISCOVER_CREATE_NAME,
+            self.uut.main(['openstack_discover_create.py',
                            'foobar', 'snafu'],
-                          dict(operation='create', name='foobar'),
+                          dict(operation='discover_create', name='foobar'),
                           self.service_sessions)
         self.assertRegex(' '.join(context.output),
                          r'.*existing.*%s' % 'foobar')
@@ -244,9 +246,9 @@ class TestMain(TestCaseBase):
 
     def test_create_exception(self):
         """Test main calls discover and raises important exceptions"""
-        args = ([self.uut.DISCOVER_CREATE_NAME,
+        args = (['openstack_discover_create.py',
                  'foobar', 'snafu'],
-                dict(operation='discover', name='foobar'),
+                dict(operation='discover_create', name='foobar'),
                 self.service_sessions)
         msg = "Unittest error message"
         for xcept in (RuntimeError(msg), ValueError(msg), KeyError(msg)):
@@ -258,9 +260,9 @@ class TestMain(TestCaseBase):
         """Test main does not create when discover successful"""
         with self.assertLogs(level='ERROR') as context:
             # discover will NOT raise, main should exit
-            self.uut.main([self.uut.ONLY_CREATE_NAME,
+            self.uut.main(['openstack_exclusive_create.py',
                            'snafu', 'foobar'],
-                          dict(operation='exclusive', name='foobar'),
+                          dict(operation='exclusive_create', name='foobar'),
                           self.service_sessions)
         self.assertRegex(' '.join(context.output),
                          r'.*existing.*%s' % 'foobar')
@@ -271,7 +273,7 @@ class TestMain(TestCaseBase):
 
     def test_destroy(self):
         """Test main calls destroy function"""
-        self.uut.main([self.uut.DESTROY_NAME, 'snafu'],
+        self.uut.main(['openstack_destroy.py', 'snafu'],
                       dict(operation='destroy', name='foobar'),
                       self.service_sessions)
         self.assertFalse(self.create.called)

@@ -22,6 +22,7 @@ import os
 import os.path
 import logging
 import random
+import re
 from importlib import import_module
 from imp import find_module
 import time
@@ -33,22 +34,22 @@ import shutil
 import virtualenv
 from flock import Flock
 
-# Operation is discovered by symlink name used to execute script
-ONLY_CREATE_NAME = 'openstack_exclusive_create.py'
-DISCOVER_CREATE_NAME = 'openstack_discover_create.py'
-DESTROY_NAME = 'openstack_destroy.py'
-REAP_NAME = 'openstack_reap.py'
-ALLOWED_NAMES = (DISCOVER_CREATE_NAME, DESTROY_NAME, ONLY_CREATE_NAME, REAP_NAME)
+# Operation is discovered by symlink name used to execute script,
+# e.g. 'openstack_exclusive_create'
+OPERATIONS = ('exclusive_create', 'discover_create', 'destroy', 'reap')
+
+# Stringified form: list of the valid names for invoking this script.
+ALLOWED_NAMES = ', '.join(['"openstack_{}"'.format(_) for _ in OPERATIONS])
 
 DESCRIPTION = ('Low dependency script called by ADEPT playbooks'
                ' to manage OpenStack VMs.')
 
 EPILOG = ('Required:  The WORKSPACE environment variable must exist and point to a'
           ' writable directory.  The script must be invoked by link (or symlink)'
-          ' named "%s", "%s", "%s", or "%s".'
-          ' If named "%s", VM creation will'
+          ' named %s'
+          ' If named "openstack_%s", VM creation will'
           ' fail if another with the same name already exist.'
-          % tuple(list(ALLOWED_NAMES) + [ONLY_CREATE_NAME]))
+          % (ALLOWED_NAMES, OPERATIONS[0]))
 
 # Needed for unittesting so argparse doesn't call system.exit()
 ENABLE_HELP = True
@@ -1066,7 +1067,7 @@ def parse_args(argv, operation='help'):
     Examine command line arguments, show usage info if inappropriate for operation
 
     :param argv: List of command-line arguments
-    :param operation: String of 'discover', 'create', 'destroy', 'reap', or 'help'
+    :param operation: one of the supported operations (see script), or "help"
     :returns: Dictionary of parsed command-line options
     """
     # Operate on a copy
@@ -1076,7 +1077,7 @@ def parse_args(argv, operation='help'):
                                      epilog=EPILOG,
                                      add_help=ENABLE_HELP)
 
-    if operation not in ('destroy', 'reap'):
+    if 'create' in operation:
         parser.add_argument('--image', '-i', default='CentOS-Cloud-7',
                             help=('If creating a VM, use this (existing) image instead'
                                   ' of "CentOS-Cloud-7" (Optional).'))
@@ -1096,10 +1097,10 @@ def parse_args(argv, operation='help'):
 
         parser.add_argument('--preserve', default=DEFAULT_PRESERVE, type=int,
                             help='The number of hours beyond one, before'
-                                 ' running "%s" would force deletion.'
-                                 ' Set to "0" for indefinite, otherwise defaults to'
+                                 ' running a reaper script would force deletion.'
+                                 ' Set to "-1" for indefinite, otherwise defaults to'
                                  ' %s (Optional).  Takes no action in --dry-run'
-                                 ' mode.' % (REAP_NAME, DEFAULT_PRESERVE))
+                                 ' mode.' % DEFAULT_PRESERVE)
 
         parser.add_argument('--size', '-s', default=None, type=int,
                             help=('If creating a VM, also create and attach'
@@ -1139,13 +1140,12 @@ def parse_args(argv, operation='help'):
                                   ' display the actions that would have been taken.'))
 
     # Consumer of remaining arguments must come last
-    if operation not in ('destroy', 'reap'):
+    if 'create' in operation:
         # "pubkey" will be a list, using "pubkeys" causes --help to be wrong
         # (workaround below)
         parser.add_argument('pubkey', nargs='+',
                             help=('One or more paths to ssh public key files'
-                                  ' (not required for "%s" or "%s")'
-                                  % (DESTROY_NAME, REAP_NAME)))
+                                  ' (only required for "create" actions)'))
 
     if operation == 'help':
         parser.print_help()
@@ -1183,13 +1183,13 @@ def main(argv, dargs, service_sessions):
     :returns: Exit code integer
     """
     random.seed()
-    if dargs['operation'] in ('discover', 'create', 'exclusive'):
+    if 'create' in dargs['operation']:
         logging.info('Attempting to find VM %s.', dargs['name'])
         # The general exception is re-raised on secondary exception
         try:
             OpenstackREST(service_sessions)
             discover(**dargs)
-            if dargs['operation'] == 'exclusive':  # no exception == found VM
+            if 'exclusive' in dargs['operation']:  # no exception == found VM
                 logging.error("Found existing vm %s, refusing to re-create!"
                               "  Exiting non-zero.", dargs['name'])
                 sys.exit(1)
@@ -1357,18 +1357,17 @@ def activate_and_setup(namespace, venvdir, requirements, onlybin, nobin):
 # N/B: Any/All names used here are in the global scope
 if __name__ == '__main__':  # pylint: disable=C0103
     # Parse arguments
-    basename = os.path.basename(sys.argv[0])
-    if basename == DISCOVER_CREATE_NAME:
-        _dargs = parse_args(sys.argv, 'discover')
-    elif basename == ONLY_CREATE_NAME:
-        _dargs = parse_args(sys.argv, 'exclusive')
-    elif basename == DESTROY_NAME:
-        _dargs = parse_args(sys.argv, 'destroy')
-    elif basename == REAP_NAME:
-        _dargs = parse_args(sys.argv, 'reap')
-    else:
-        logging.error("Script was not called as %s, %s, or %s", *ALLOWED_NAMES)
+    basename = re.sub(r'\.py$', '', os.path.basename(sys.argv[0]))
+    op_requested = re.sub('^openstack_', '', basename)
+    if op_requested == basename:
+        logging.error("Script must be invoked with 'openstack_' prefix")
         parse_args(sys.argv, 'help')  # exits
+    if op_requested not in OPERATIONS:
+        logging.error("Unknown operation '%s'; script must be invoked with"
+                      " one of the following names: %s", op_requested,
+                      ALLOWED_NAMES)
+        parse_args(sys.argv, 'help')  # exits
+    _dargs = parse_args(sys.argv, op_requested)
     del basename  # keep global namespace clean
 
     workspace = os.environ.get('WORKSPACE')
