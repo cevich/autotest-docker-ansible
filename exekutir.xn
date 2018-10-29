@@ -113,7 +113,7 @@
 - variable:
     name: "ANSIBLE_VAULT_PASSWORD_FILE"
     from_env: "ANSIBLE_VAULT_PASSWORD_FILE"
-    default: ""
+    default: "/dev/null"
 
 # For all contexts, exit non-zero immediatly on failure.
 # Transition summary:

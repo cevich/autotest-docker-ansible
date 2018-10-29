@@ -80,14 +80,15 @@ echo
         # pip may not support --cache-dir, force it's location into $WORKSPACE the ugly-way
         OLD_HOME="$HOME"
         export HOME="$WORKSPACE"
-        pip install --force-reinstall --upgrade pip==9.0.1
-        # Undo --cache-dir workaround
-        export HOME="$OLD_HOME"
+        pip install --disable-pip-version-check --force-reinstall --upgrade \
+            pip==18.1 setuptools==40.5.0 wheel==0.32.2
         # Install fixed, trusted, hashed versions of all requirements (including pip and virtualenv)
         pip --cache-dir="$PIPCACHE" install --force-reinstall --require-hashes \
             --requirement "$SCRIPT_DIR/requirements.txt"
         # Setup trusted virtualenv using hashed packages from requirements.txt
         ./.venvbootstrap/bin/virtualenv --no-site-packages --python=python2.7 "./$VENV_DIRNAME"
+        # Undo --cache-dir workaround
+        export HOME="$OLD_HOME"
         # Exit untrusted virtualenv
         deactivate
         rm -rf ./.venvbootstrap  # No longer needed
